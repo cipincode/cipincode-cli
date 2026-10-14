@@ -54,14 +54,15 @@ curl -fsSL "$DOMAIN/downloads/agent.tar.gz" -o "/tmp/agent.tar.gz"
 tar -xzf "/tmp/agent.tar.gz" -C "$CIPIN_HOME/agent"
 rm -f "/tmp/agent.tar.gz"
 
-case ":$PATH:" in
-  *":$INSTALL_DIR:"*) ;;
-  *)
-    echo ""
-    echo "⚠️  Tambahkan baris ini ke ~/.bashrc atau ~/.zshrc:"
-    echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
-    echo "    export CIPINCODE_AGENT_DIR=\"$CIPIN_HOME/agent\""
-    ;;
-esac
+# Tambahkan export otomatis ke zshrc / bashrc jika belum ada
+PROFILE="$HOME/.zshrc"
+[ -f "$HOME/.bashrc" ] && PROFILE="$HOME/.bashrc"
 
-info "Selesai! Jalankan: cipincode --version"
+if ! grep -q "CIPINCODE_AGENT_DIR" "$PROFILE" 2>/dev/null; then
+  info "Menambahkan CIPINCODE_AGENT_DIR ke $PROFILE..."
+  echo "" >> "$PROFILE"
+  echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$PROFILE"
+  echo "export CIPINCODE_AGENT_DIR=\"$CIPIN_HOME/agent\"" >> "$PROFILE"
+fi
+
+info "Selesai! Jalankan: cipincode"
