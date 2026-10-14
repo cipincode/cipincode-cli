@@ -1,0 +1,91 @@
+.mot-terminal {
+  --mot-t-shell-bg: #fafafa;
+  --mot-t-body-bg: #ffffff;
+  --mot-t-body-fg: #3f3f46;
+  --mot-t-border: rgb(0 0 0 / 0.1);
+  --mot-t-ring: rgb(0 0 0 / 0.06);
+  --mot-t-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.12);
+  --mot-t-titlebar-bg: #ececec;
+  --mot-t-titlebar-border: rgb(0 0 0 / 0.08);
+  --mot-t-title-fg: #3c3c3c;
+  --mot-t-line-green: #15803d;
+  --mot-t-line-cyan: #0f766e;
+  --mot-t-line-dim: #71717a;
+  --mot-terminal-cursor-bg: #27272a;
+}
+
+.dark .mot-terminal {
+  --mot-t-shell-bg: #1e1e1e;
+  --mot-t-body-bg: #1e1e1e;
+  --mot-t-body-fg: #cccccc;
+  --mot-t-border: rgb(255 255 255 / 0.1);
+  --mot-t-ring: rgb(0 0 0 / 0.2);
+  --mot-t-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.45);
+  --mot-t-titlebar-bg: #2d2d2d;
+  --mot-t-titlebar-border: rgb(255 255 255 / 0.08);
+  --mot-t-title-fg: #d4d4d8;
+  --mot-t-line-green: #16c60c;
+  --mot-t-line-cyan: #61d6d6;
+  --mot-t-line-dim: #767676;
+  --mot-terminal-cursor-bg: #cccccc;
+}
+
+.mot-terminal-cursor {
+  animation: mot-terminal-blink 1.15s step-start infinite;
+}
+
+.mot-terminal-line-in {
+  animation: mot-terminal-line-fade 0.12s ease-out both;
+}
+
+@keyframes mot-terminal-blink {
+  0%, 49.9% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes mot-terminal-line-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mot-codeblock {
+  --mot-sh-kw: #b83280;
+  --mot-sh-str: #166534;
+  --mot-sh-fn: #6d28d9;
+  --mot-sh-num: #0369a1;
+  --mot-sh-prop: #18181b;
+  --mot-sh-var: #0e7490;
+  --mot-sh-punct: #a21caf;
+  --mot-cursor-fg: #27272a;
+
+  border-left-width: 2px;
+  border-left-style: solid;
+  border-left-color: rgb(59 142 234 / 0.55);
+  background-color: rgb(244 244 245 / 0.95);
+}
+
+.dark .mot-codeblock {
+  --mot-sh-kw: #ff79c6;
+  --mot-sh-str: #50fa7b;
+  --mot-sh-fn: #bd93f9;
+  --mot-sh-num: #8be9fd;
+  --mot-sh-prop: #f8f8f2;
+  --mot-sh-var: #8be9fd;
+  --mot-sh-punct: #ff79c6;
+  --mot-cursor-fg: #cccccc;
+
+  border-left-color: rgb(59 142 234 / 0.45);
+  background-color: rgb(0 0 0 / 0.55);
+}
+
+.mot-sh-kw { color: var(--mot-sh-kw); }
+.mot-sh-str { color: var(--mot-sh-str); }
+.mot-sh-fn { color: var(--mot-sh-fn); }
+.mot-sh-num { color: var(--mot-sh-num); }
+.mot-sh-prop { color: var(--mot-sh-prop); }
+.mot-sh-var { color: var(--mot-sh-var); }
+.mot-sh-punct { color: var(--mot-sh-punct); }
+
+.mot-codeblock .mot-terminal-cursor {
+  background-color: var(--mot-cursor-fg);
+}

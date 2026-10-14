@@ -1,0 +1,110 @@
+@keyframes fsv3-mock-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fsv3-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fsv3-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fsv3-fn-wedge,
+.fsv3-fn-gap-mark,
+.fsv3-do-stop,
+.fsv3-do-pin,
+.fsv3-ex-side,
+.fsv3-ex-vs,
+.fsv3-ex-result {
+  opacity: 0;
+}
+
+.fsv3-fn-mock--active .fsv3-fn-wedge--1 {
+  animation: fsv3-mock-in 400ms cubic-bezier(0.22, 1, 0.36, 1) 60ms forwards;
+}
+
+.fsv3-fn-mock--active .fsv3-fn-wedge--2 {
+  animation: fsv3-mock-in 400ms cubic-bezier(0.22, 1, 0.36, 1) 140ms forwards;
+}
+
+.fsv3-fn-mock--active .fsv3-fn-wedge--3 {
+  animation: fsv3-mock-in 460ms cubic-bezier(0.22, 1, 0.36, 1) 220ms forwards;
+}
+
+.fsv3-fn-mock--active .fsv3-fn-wedge--4 {
+  animation: fsv3-mock-in 400ms ease-out 300ms forwards;
+}
+
+.fsv3-fn-mock--active .fsv3-fn-gap-mark {
+  animation: fsv3-fade-in 360ms ease-out 480ms forwards;
+}
+
+.fsv3-do-mock--active .fsv3-do-stop--1 {
+  animation: fsv3-mock-in 320ms ease-out 60ms forwards;
+}
+
+.fsv3-do-mock--active .fsv3-do-stop--2 {
+  animation: fsv3-mock-in 320ms ease-out 120ms forwards;
+}
+
+.fsv3-do-mock--active .fsv3-do-stop--3 {
+  animation: fsv3-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) 200ms forwards;
+}
+
+.fsv3-do-mock--active .fsv3-do-stop--4 {
+  animation: fsv3-mock-in 320ms ease-out 280ms forwards;
+}
+
+.fsv3-do-mock--active .fsv3-do-pin {
+  animation: fsv3-mock-in 420ms cubic-bezier(0.22, 1, 0.36, 1) 380ms forwards;
+}
+
+.fsv3-ex-mock--active .fsv3-ex-side--a {
+  animation: fsv3-mock-in 360ms ease-out 80ms forwards;
+}
+
+.fsv3-ex-mock--active .fsv3-ex-vs {
+  animation: fsv3-fade-in 280ms ease-out 160ms forwards;
+}
+
+.fsv3-ex-mock--active .fsv3-ex-side--b {
+  animation: fsv3-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) 220ms forwards;
+}
+
+.fsv3-ex-mock--active .fsv3-ex-result {
+  animation: fsv3-mock-in 400ms cubic-bezier(0.22, 1, 0.36, 1) 380ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fsv3-fn-wedge,
+  .fsv3-fn-gap-mark,
+  .fsv3-do-stop,
+  .fsv3-do-pin,
+  .fsv3-ex-side,
+  .fsv3-ex-vs,
+  .fsv3-ex-result {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}

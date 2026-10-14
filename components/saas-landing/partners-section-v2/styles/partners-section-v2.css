@@ -1,0 +1,7 @@
+/* Server HTML would paint these before GSAP sets their intro state, so keep
+   them hidden until the motion hook marks the section ready. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-pv2-root]:not([data-pv2-ready]) :is([data-pv2-word], [data-pv2-description], [data-pv2-grid]) {
+    visibility: hidden;
+  }
+}

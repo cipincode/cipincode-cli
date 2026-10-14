@@ -1,0 +1,50 @@
+.hiw1-beam-h {
+  right: -3rem;
+  width: 3rem;
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--muted-foreground) 0 4px,
+    transparent 4px 8px
+  );
+  background-size: 16px 2px;
+  animation: hiw1-dash-flow 1.5s linear infinite;
+}
+
+@media (min-width: 1024px) {
+  .hiw1-beam-h {
+    right: -2.5rem;
+    width: 2.5rem;
+  }
+}
+
+.hiw1-beam-vertical {
+  width: 2px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    var(--muted-foreground) 0 4px,
+    transparent 4px 8px
+  );
+  background-size: 2px 16px;
+  animation: hiw1-dash-flow-v 1.5s linear infinite;
+}
+
+@keyframes hiw1-dash-flow {
+  to {
+    background-position: 16px 0;
+  }
+}
+
+@keyframes hiw1-dash-flow-v {
+  to {
+    background-position: 0 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hiw1-beam-h,
+  .hiw1-beam-vertical {
+    animation: none;
+    background-position: 0 0;
+  }
+}
