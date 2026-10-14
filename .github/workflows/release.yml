@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ─── Build binary cipincode untuk setiap platform ───────────────────────────
+  build-binary:
+    name: Build binary (${{ matrix.goos }}-${{ matrix.goarch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            runner: ubuntu-latest
+          - goos: linux
+            goarch: arm64
+            runner: ubuntu-24.04-arm
+          - goos: darwin
+            goarch: amd64
+            runner: macos-13
+          - goos: darwin
+            goarch: arm64
+            runner: macos-latest
+          - goos: windows
+            goarch: amd64
+            runner: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/tui/go.mod
+
+      - name: Build binary
+        working-directory: cli/tui
+        env:
+          GOOS:   ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          go build \
+            -ldflags "-X main.version=${VERSION} -s -w" \
+            -o "../../dist/cipincode-${{ matrix.goos }}-${{ matrix.goarch }}${EXT}" \
+            .
+        shell: bash
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cipincode-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/cipincode-*
+          retention-days: 1
+
+  # ─── Bundle agent (TypeScript yang dijalankan Bun) ──────────────────────────
+  bundle-agent:
+    name: Bundle agent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        working-directory: cli/agent
+        run: bun install
+
+      - name: Bundle agent
+        working-directory: cli
+        run: |
+          mkdir -p dist-agent
+          cp -R agent/src agent/package.json dist-agent/
+          tar -czf agent.tar.gz -C dist-agent .
+
+      - name: Upload agent artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cipincode-agent
+          path: cli/agent.tar.gz
+          retention-days: 1
+
+  # ─── Buat GitHub Release dan upload semua asset ─────────────────────────────
+  release:
+    name: Create Release
+    needs: [build-binary, bundle-agent]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download semua artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lh artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: CipinCode CLI ${{ github.ref_name }}
+          body: |
+            ## CipinCode CLI ${{ github.ref_name }}
+
+            ### Instalasi
+
+            ```bash
+            npm install -g cipincode
+            ```
+
+            ### Manual download
+
+            Pilih binary sesuai platform di bawah.
+          files: |
+            artifacts/cipincode-linux-amd64
+            artifacts/cipincode-linux-arm64
+            artifacts/cipincode-darwin-amd64
+            artifacts/cipincode-darwin-arm64
+            artifacts/cipincode-windows-amd64.exe
+            artifacts/agent.tar.gz
+          fail_on_unmatched_files: true
+
+  # ─── Publish npm package ─────────────────────────────────────────────────────
+  publish-npm:
+    name: Publish npm
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Set version
+        working-directory: cipincode-npm
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version
+
+      - name: Publish ke npm
+        working-directory: cipincode-npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

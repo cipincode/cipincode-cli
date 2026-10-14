@@ -1,0 +1,18 @@
+# Binary hasil build
+dist/
+*.exe
+
+# Bun
+node_modules/
+bun.lockb
+
+# Go
+*.test
+*.out
+
+# npm package cache
+cipincode-npm/.cipincode/
+
+# OS
+.DS_Store
+Thumbs.db
