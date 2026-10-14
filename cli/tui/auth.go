@@ -14,7 +14,7 @@ import (
 	"github.com/charmbracelet/x/term"
 )
 
-const defaultURL = "http://localhost:8000"
+const defaultURL = "https://cli.cipincode.com"
 
 var errInvalidKey = errors.New("API key tidak valid, nonaktif, atau sudah dihapus")
 
