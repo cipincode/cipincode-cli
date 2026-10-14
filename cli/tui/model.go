@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -391,6 +392,7 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 	}
 	m.input.Reset()
 
+	cwd, _ := os.Getwd()
 	request := chatRequest{
 		Message: text,
 		Mode:    m.mode.key(),
@@ -398,6 +400,7 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 		Session: m.sessionID,
 		Agent:   m.activeAgentID(),
 		History: m.history(),
+		Cwd:     cwd,
 		URL:     m.config.URL,
 		Key:     m.config.Key,
 	}

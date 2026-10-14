@@ -39,6 +39,7 @@ type chatRequest struct {
 	Session string        `json:"session,omitempty"`
 	Agent   int           `json:"agent,omitempty"`
 	History []historyItem `json:"history"`
+	Cwd     string        `json:"cwd,omitempty"`
 	URL     string        `json:"-"`
 	Key     string        `json:"-"`
 }
