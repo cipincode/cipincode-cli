@@ -278,7 +278,10 @@ func TestTypedCommandRunsOnEnter(t *testing.T) {
 	m, _ = update(m, typed("/version"))
 	m, _ = update(m, key(tea.KeyEnter)) // menu terbuka: menjalankan item terpilih
 
-	if !strings.Contains(plain(m), "cipincode "+version) {
+	if m.modal == nil {
+		t.Fatal("/version seharusnya membuka modal")
+	}
+	if !strings.Contains(plain(m), "CipinCode CLI v"+version) {
 		t.Fatalf("keluaran /version tidak tampil:\n%s", plain(m))
 	}
 }

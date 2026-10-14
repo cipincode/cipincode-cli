@@ -541,7 +541,7 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 			return m, fetchUsageCmd(m.config, true)
 		}
 	case "version":
-		m = m.note(roleSystem, "cipincode "+version)
+		m = m.openModal("Versi", "CipinCode CLI v"+version+"\n\n" + mutedStyle.Render("Tool AI terminal interaktif untuk developer."))
 	case "whoami":
 		if m.config == nil {
 			m = m.note(roleSystem, "Belum login. Ketik /login untuk masuk.")

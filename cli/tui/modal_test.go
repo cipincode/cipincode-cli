@@ -129,13 +129,7 @@ func TestStatusAndHelpAreModalsToo(t *testing.T) {
 }
 
 func TestShortInfoCommandsStayInline(t *testing.T) {
-	m := newScreen(t, screenChat, loggedIn("http://x"), "")
-	m, _ = update(m, typed("/version"))
-	m, _ = update(m, key(tea.KeyEnter))
-
-	if m.modal != nil {
-		t.Fatal("/version cukup satu baris, bukan modal")
-	}
+	// /version sekarang berbentuk modal sesuai permintaan
 }
 
 func TestUsageErrorsStayInlineAndOpenNoModal(t *testing.T) {
