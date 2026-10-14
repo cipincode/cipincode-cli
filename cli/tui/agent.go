@@ -175,6 +175,12 @@ func findAgentDir(explicit string) (string, error) {
 	if explicit != "" {
 		candidates = append(candidates, explicit)
 	}
+	if env := os.Getenv("CIPINCODE_AGENT_DIR"); env != "" {
+		candidates = append(candidates, env)
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		candidates = append(candidates, filepath.Join(home, ".local", "share", "cipincode", "agent"))
+	}
 	if exe, err := os.Executable(); err == nil {
 		base := filepath.Dir(exe)
 		candidates = append(candidates, filepath.Join(base, "..", "agent"), filepath.Join(base, "agent"))
