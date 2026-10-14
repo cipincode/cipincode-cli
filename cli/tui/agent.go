@@ -18,10 +18,8 @@ import (
 	"time"
 )
 
-// Agent adalah koneksi ke server agent (Bun/TypeScript).
 type Agent struct {
-	URL string
-	// Token dibuat acak saat CLI menjalankan agent, agar hanya CLI ini yang bisa memakainya.
+	URL   string
 	Token string
 	cmd   *exec.Cmd
 }
@@ -31,25 +29,21 @@ type historyItem struct {
 	Content string `json:"content"`
 }
 
-// chatRequest adalah satu giliran percakapan. URL dan Key (login pengguna) dikirim
-// lewat header agar agent bisa memanggil dashboard atas nama pengguna.
 type chatRequest struct {
-	Message  string        `json:"message"`
-	Mode     string        `json:"mode"`
-	Effort   string        `json:"effort"`
-	Provider string        `json:"provider,omitempty"`
-	Model    string        `json:"model,omitempty"`
-	// ProviderKey hanya untuk agent lokal (tidak diteruskan ke dashboard).
+	Message     string        `json:"message"`
+	Mode        string        `json:"mode"`
+	Effort      string        `json:"effort"`
+	Provider    string        `json:"provider,omitempty"`
+	Model       string        `json:"model,omitempty"`
 	ProviderKey string        `json:"provider_key,omitempty"`
-	Session  string        `json:"session,omitempty"`
-	Agent   int           `json:"agent,omitempty"`
-	History []historyItem `json:"history"`
-	Cwd     string        `json:"cwd,omitempty"`
-	URL     string        `json:"-"`
-	Key     string        `json:"-"`
+	Session     string        `json:"session,omitempty"`
+	Agent       int           `json:"agent,omitempty"`
+	History     []historyItem `json:"history"`
+	Cwd         string        `json:"cwd,omitempty"`
+	URL         string        `json:"-"`
+	Key         string        `json:"-"`
 }
 
-// chatEvent adalah peristiwa dari aliran jawaban: token, usage, atau blocked.
 type chatEvent struct {
 	kind    string
 	text    string
@@ -62,7 +56,7 @@ type event struct {
 	Text    string      `json:"text"`
 	Message string      `json:"message"`
 	Session *usageMeter `json:"session"`
-	Weekly  *usageMeter `json:"weekly"` // null untuk paket tanpa batas mingguan
+	Weekly  *usageMeter `json:"weekly"`
 	Plan    *usagePlan  `json:"plan"`
 }
 
@@ -77,28 +71,24 @@ func (e event) snapshot() *usageSnapshot {
 	return snap
 }
 
-// connectAgent memakai server yang sudah ada, atau menjalankan agent lokal.
-// Mencoba semua runtime yang tersedia berurutan (Node dulu, lalu Bun) agar
-// satu runtime yang rusak tidak langsung menggagalkan CLI. Log agent ditangkap
-// dan ditampilkan saat gagal agar mudah didiagnosis di laptop pengguna.
 func connectAgent(serverURL, agentDir string) (*Agent, error) {
-	// Gunakan domain remote default jika tidak diset secara lokal agar CLI tidak perlu menjalankan server node lokal.
 	if serverURL == "" {
 		serverURL = os.Getenv("CIPINCODE_AGENT_URL")
 	}
 	if serverURL == "" {
 		serverURL = "https://cli.cipincode.com"
 	}
+	// Pakai server remote secara langsung tanpa spawn proses lokal jika tidak ada override khusus
+	if serverURL == "https://cli.cipincode.com" && os.Getenv("CIPINCODE_LOCAL_AGENT") != "1" {
+		a := &Agent{URL: serverURL, Token: os.Getenv("CIPINCODE_AGENT_TOKEN")}
+		return a, nil
+	}
+
 	a := &Agent{URL: strings.TrimRight(serverURL, "/"), Token: os.Getenv("CIPINCODE_AGENT_TOKEN")}
 	if err := a.waitHealthy(5 * time.Second); err == nil {
 		return a, nil
 	}
 
-	if serverURL != "https://cli.cipincode.com" {
-		return nil, fmt.Errorf("agent di %s tidak merespons", a.URL)
-	}
-
-	// Fallback ke proses lokal jika domain utama tidak merespons
 	dir, err := findAgentDir(agentDir)
 	if err != nil {
 		return nil, err
@@ -136,8 +126,6 @@ func connectAgent(serverURL, agentDir string) (*Agent, error) {
 			if logPath != "" {
 				detail += "\nLog lengkap: " + logPath
 			}
-			// Jika proses mati cepat, kemungkinan crash (modul hilang, syntax, izin).
-			// Log di atas biasanya sudah menjelaskan sebabnya.
 			failures = append(failures, detail)
 			continue
 		}
@@ -155,9 +143,6 @@ func connectAgent(serverURL, agentDir string) (*Agent, error) {
 	return nil, errors.New(sb.String())
 }
 
-// startAgent menjalankan satu runtime agent di port tertentu dan menangkap
-// stdout/stderr-nya ke buffer. Bila CIPINCODE_AGENT_DEBUG=1, log juga
-// diteruskan ke stderr agar terlihat langsung di terminal.
 func startAgent(dir string, rt runtimeInfo, port int, token string) (*Agent, *syncBuffer, error) {
 	var cmd *exec.Cmd
 	if rt.mode == "node" {
@@ -186,8 +171,6 @@ func startAgent(dir string, rt runtimeInfo, port int, token string) (*Agent, *sy
 	return a, logs, nil
 }
 
-// syncBuffer adalah bytes.Buffer yang aman untuk ditulis dari goroutine
-// pemantau proses agent.
 type syncBuffer struct {
 	mu sync.Mutex
 	b  bytes.Buffer
@@ -222,7 +205,6 @@ func lastAgentLogPath() string {
 	return agentLogPath
 }
 
-// dumpAgentLog menyimpan log penuh ke file temp untuk diagnosis lanjut.
 func dumpAgentLog(logs string) string {
 	f, err := os.CreateTemp("", "cipincode-agent-*.log")
 	if err != nil {
@@ -234,7 +216,6 @@ func dumpAgentLog(logs string) string {
 	return f.Name()
 }
 
-// lastLines mengambil N baris terakhir agar pesan error tetap ringkas.
 func lastLines(s string, n int) string {
 	s = strings.TrimRight(s, "\n")
 	if s == "" {
@@ -244,7 +225,6 @@ func lastLines(s string, n int) string {
 	if len(lines) > n {
 		lines = lines[len(lines)-n:]
 	}
-	// Batasi total panjang agar tidak membanjiri terminal.
 	out := strings.Join(lines, "\n")
 	if len(out) > 2000 {
 		out = out[len(out)-2000:]
@@ -255,11 +235,10 @@ func lastLines(s string, n int) string {
 	return strings.TrimSpace(out)
 }
 
-// runtimeInfo adalah interpreter untuk menjalankan agent.
 type runtimeInfo struct {
-	bin   string // path node atau bun
-	mode  string // "node" atau "bun"
-	entry string // file agent relatif dari agent dir
+	bin   string
+	mode  string
+	entry string
 }
 
 func (r runtimeInfo) describe() string {
@@ -269,8 +248,6 @@ func (r runtimeInfo) describe() string {
 	return fmt.Sprintf("bun (%s)", r.bin)
 }
 
-// healthTimeout memberi Bun waktu lebih lama karena kompilasi awal di macOS
-// bisa lambat; Node biasanya siap <1 detik.
 func (r runtimeInfo) healthTimeout() time.Duration {
 	if r.mode == "bun" {
 		return 15 * time.Second
@@ -278,8 +255,6 @@ func (r runtimeInfo) healthTimeout() time.Duration {
 	return 10 * time.Second
 }
 
-// findRuntimes mengembalikan semua runtime yang bisa dipakai, berurutan:
-// Node + dist/server.node.js dulu (tanpa Bun), lalu Bun + src/server.ts.
 func findRuntimes(agentDir string) ([]runtimeInfo, error) {
 	var out []runtimeInfo
 	if node, err := exec.LookPath("node"); err == nil {
@@ -295,7 +270,6 @@ func findRuntimes(agentDir string) ([]runtimeInfo, error) {
 	if len(out) > 0 {
 		return out, nil
 	}
-	// Pesan spesifik agar pengguna tahu apa yang hilang.
 	hasDist := false
 	hasSrc := false
 	if _, err := os.Stat(filepath.Join(agentDir, "dist", "server.node.js")); err == nil {
@@ -314,7 +288,6 @@ func findRuntimes(agentDir string) ([]runtimeInfo, error) {
 	}
 }
 
-// findRuntime dipertahankan untuk kompatibilitas test lama.
 func findRuntime(agentDir string) (runtimeInfo, error) {
 	rts, err := findRuntimes(agentDir)
 	if err != nil {
@@ -401,7 +374,6 @@ func (a *Agent) waitHealthy(timeout time.Duration) error {
 	return fmt.Errorf("agent tidak merespons di %s", a.URL)
 }
 
-// Stop menghentikan proses agent yang dijalankan oleh CLI ini.
 func (a *Agent) Stop() {
 	if a == nil || a.cmd == nil || a.cmd.Process == nil {
 		return
@@ -411,7 +383,6 @@ func (a *Agent) Stop() {
 	a.cmd = nil
 }
 
-// Chat mengirim satu giliran percakapan dan mengalirkan peristiwanya ke out.
 func (a *Agent) Chat(ctx context.Context, chat chatRequest, out chan<- chatEvent) error {
 	body, _ := json.Marshal(chat)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.URL+"/chat", bytes.NewReader(body))
@@ -439,8 +410,6 @@ func (a *Agent) Chat(ctx context.Context, chat chatRequest, out chan<- chatEvent
 	return readEvents(resp.Body, out)
 }
 
-// readEvents membaca aliran SSE dari agent. Aliran berakhir pada peristiwa done,
-// blocked (jatah habis), atau error.
 func readEvents(r io.Reader, out chan<- chatEvent) error {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
