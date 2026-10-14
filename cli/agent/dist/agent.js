@@ -6,6 +6,7 @@ export const efforts = ['low', 'medium', 'high', 'xhigh', 'ultra'];
 export function parseEffort(value) {
     return efforts.find((e) => e === value) ?? 'medium';
 }
+import { streamDirect } from './direct';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * Jalankan satu giliran percakapan lewat server dashboard, yang meneruskannya ke
@@ -25,6 +26,19 @@ export async function* run(input, fetchImpl = fetch) {
             type: 'error',
             message: 'Belum login. Ketik /login untuk masuk.',
         };
+        return;
+    }
+    // Jalur langsung: kunci milik pengguna, tanpa lewat server dan kuota.
+    if (input.providerKey && input.provider) {
+        yield* streamDirect({
+            provider: input.provider,
+            providerKey: input.providerKey,
+            model: input.model || '',
+            message: input.message,
+            history: input.history ?? [],
+            mode: input.mode ?? 'chat',
+            effort: input.effort ?? 'medium',
+        }, fetchImpl);
         return;
     }
     let response;

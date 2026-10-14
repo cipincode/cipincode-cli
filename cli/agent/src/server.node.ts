@@ -85,6 +85,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
                     typeof body.model === 'string' && body.model !== ''
                         ? body.model
                         : undefined,
+                providerKey:
+                    typeof body.provider_key === 'string' &&
+                    body.provider_key !== ''
+                        ? body.provider_key
+                        : undefined,
                 session: typeof body.session === 'string' ? body.session : undefined,
                 agent: typeof body.agent === 'number' ? body.agent : undefined,
                 credentials,

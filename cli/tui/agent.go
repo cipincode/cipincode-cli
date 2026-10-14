@@ -38,6 +38,8 @@ type chatRequest struct {
 	Effort   string        `json:"effort"`
 	Provider string        `json:"provider,omitempty"`
 	Model    string        `json:"model,omitempty"`
+	// ProviderKey hanya untuk agent lokal (tidak diteruskan ke dashboard).
+	ProviderKey string        `json:"provider_key,omitempty"`
 	Session  string        `json:"session,omitempty"`
 	Agent   int           `json:"agent,omitempty"`
 	History []historyItem `json:"history"`

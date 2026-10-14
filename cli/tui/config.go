@@ -14,6 +14,9 @@ type Config struct {
 	Name string `json:"name"`
 	// Email hanya untuk ditampilkan.
 	Email string `json:"email"`
+	// ProviderKeys adalah kunci API milik pengguna per provider
+	// (BYOK) agar bisa terhubung langsung tanpa lewat server.
+	ProviderKeys map[string]string `json:"provider_keys,omitempty"`
 }
 
 func configPath() (string, error) {

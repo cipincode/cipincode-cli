@@ -27,6 +27,8 @@ export type AgentEvent =
     | { type: 'error'; message: string }
     | { type: 'done' };
 
+import { streamDirect } from './direct';
+
 export type RunInput = {
     message: string;
     history?: Message[];
@@ -36,6 +38,8 @@ export type RunInput = {
     provider?: string;
     /** ID model pilihan pengguna ("" = bawaan provider). */
     model?: string;
+    /** Kunci API milik pengguna untuk jalur langsung (tidak dikirim ke dashboard). */
+    providerKey?: string;
     /** UUID percakapan; server memakainya untuk mencatat riwayat. */
     session?: string;
     /** ID agent buatan pengguna yang sedang dipilih. */
@@ -67,6 +71,23 @@ export async function* run(
             type: 'error',
             message: 'Belum login. Ketik /login untuk masuk.',
         };
+        return;
+    }
+
+    // Jalur langsung: kunci milik pengguna, tanpa lewat server dan kuota.
+    if (input.providerKey && input.provider) {
+        yield* streamDirect(
+            {
+                provider: input.provider,
+                providerKey: input.providerKey,
+                model: input.model || '',
+                message: input.message,
+                history: input.history ?? [],
+                mode: input.mode ?? 'chat',
+                effort: input.effort ?? 'medium',
+            },
+            fetchImpl,
+        );
         return;
     }
 

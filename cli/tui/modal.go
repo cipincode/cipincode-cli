@@ -19,6 +19,7 @@ const (
 	modalAgents                  // daftar pilihan agent: ↑↓ dan Enter
 	modalProviders               // daftar pilihan provider API: ↑↓ dan Enter
 	modalModels                  // daftar pilihan model: ↑↓ dan Enter
+	modalConnect                 // konfirmasi provider + kunci API langsung
 	modalUpdate                  // pengingat update: Spasi centang, Enter update, Esc nanti
 )
 
@@ -171,6 +172,8 @@ func (m model) keyModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.keyProvidersModal(msg)
 	case modalModels:
 		return m.keyModelsModal(msg)
+	case modalConnect:
+		return m.keyConnectModal(msg)
 	case modalUpdate:
 		return m.keyUpdateModal(msg)
 	}

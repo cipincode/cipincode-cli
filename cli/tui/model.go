@@ -117,6 +117,8 @@ type model struct {
 	modelID      string // ID model yang dipakai ("": bawaan provider)
 	providerCursor int
 	modelCursor    int
+	connectPending *provider      // provider yang menunggu kunci API di modal
+	connectInput   textinput.Model // kolom kunci API di modal connect
 	updateInfo     *versionInfo // info update yang sedang ditawarkan
 	updateSkip     bool         // checkbox "jangan ingatkan lagi"
 	updateManual   bool         // /update manual: laporkan juga bila sudah terbaru
@@ -410,11 +412,12 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 
 	cwd, _ := os.Getwd()
 	request := chatRequest{
-		Message:  text,
-		Mode:     m.mode.key(),
-		Effort:   m.effort.key(),
-		Provider: m.provider,
-		Model:    m.modelID,
+		Message:     text,
+		Mode:        m.mode.key(),
+		Effort:      m.effort.key(),
+		Provider:    m.provider,
+		Model:       m.modelID,
+		ProviderKey: m.providerKey(),
 		Session:  m.sessionID,
 		Agent:    m.activeAgentID(),
 		History:  m.history(),
@@ -652,6 +655,7 @@ func (m model) statusText() string {
 		"Effort      " + m.effort.key() + " · " + m.effort.description(),
 		"Provider    " + providerName(m.provider),
 		"Model       " + modelName(m.modelID),
+		"API         " + m.apiModeText(),
 		"Agent       " + m.agentName(),
 		"Sesi lalu   " + formatSession(m.lastSession),
 		"Versi       " + version,
@@ -663,6 +667,18 @@ func (m model) agentName() string {
 		return "tidak ada (/agent untuk memilih)"
 	}
 	return m.chosen.Name
+}
+
+// apiModeText menjelaskan jalur API yang dipakai: langsung dengan kunci
+// milik pengguna, atau via server CipinCode.
+func (m model) apiModeText() string {
+	if m.provider == "" {
+		return "via CipinCode (ikut paket)"
+	}
+	if m.providerKey() != "" {
+		return "langsung ke " + providerName(m.provider) + " (kunci Anda)"
+	}
+	return "via server CipinCode"
 }
 
 func (m model) usageSummary() string {

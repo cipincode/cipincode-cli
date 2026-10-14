@@ -124,8 +124,121 @@ describe('run', () => {
         });
     });
 
-    test('asks the user to log in when there are no credentials', async () => {
+    test('streams directly from Anthropic with the user key', async () => {
+        let seen: { url: string; init: RequestInit } | undefined;
         const events = await collect(
+            run(
+                {
+                    message: 'halo',
+                    provider: 'anthropic',
+                    model: 'anthropic/claude-sonnet-4-5',
+                    providerKey: 'sk-ant-x',
+                    credentials,
+                },
+                fakeFetch((url, init) => {
+                    seen = { url, init };
+                    return new Response(
+                        sseBody(
+                            {
+                                type: 'content_block_delta',
+                                delta: { type: 'text_delta', text: 'Hai' },
+                            },
+                            {
+                                type: 'content_block_delta',
+                                delta: { type: 'text_delta', text: ' juga' },
+                            },
+                        ),
+                        { status: 200 },
+                    );
+                }),
+            ),
+        );
+
+        expect(events).toEqual([
+            { type: 'token', text: 'Hai' },
+            { type: 'token', text: ' juga' },
+            { type: 'done' },
+        ]);
+        const request = seen as unknown as { url: string; init: RequestInit };
+        expect(request.url).toBe('https://api.anthropic.com/v1/messages');
+        expect(
+            (request.init.headers as Record<string, string>)['x-api-key'],
+        ).toBe('sk-ant-x');
+        expect(JSON.parse(request.init.body as string).model).toBe(
+            'claude-sonnet-4-5-20250929',
+        );
+    });
+
+    test('streams directly from OpenAI-compatible providers', async () => {
+        let seen: { url: string; init: RequestInit } | undefined;
+        const events = await collect(
+            run(
+                {
+                    message: 'halo',
+                    provider: 'openai',
+                    model: 'openai/gpt-4o',
+                    providerKey: 'sk-x',
+                    credentials,
+                },
+                fakeFetch((url, init) => {
+                    seen = { url, init };
+                    return new Response(
+                        sseBody({
+                            choices: [{ delta: { content: 'Halo' } }],
+                        }),
+                        { status: 200 },
+                    );
+                }),
+            ),
+        );
+
+        expect(events).toEqual([
+            { type: 'token', text: 'Halo' },
+            { type: 'done' },
+        ]);
+        const request = seen as unknown as { url: string; init: RequestInit };
+        expect(request.url).toBe(
+            'https://api.openai.com/v1/chat/completions',
+        );
+        expect(
+            (request.init.headers as Record<string, string>).Authorization,
+        ).toBe('Bearer sk-x');
+        // Kunci provider tidak boleh ikut ke dashboard (jalur langsung).
+        expect(request.url).not.toContain('dash.test');
+    });
+
+    test('rejects a wrong direct key with a clear message', async () => {
+        const events = await collect(
+            run(
+                {
+                    message: 'halo',
+                    provider: 'openai',
+                    model: 'openai/gpt-4o',
+                    providerKey: 'salah',
+                    credentials,
+                },
+                fakeFetch(
+                    () =>
+                        new Response(
+                            JSON.stringify({
+                                error: { message: 'Incorrect API key' },
+                            }),
+                            { status: 401 },
+                        ),
+                ),
+            ),
+        );
+
+        expect(events).toEqual([
+            {
+                type: 'error',
+                message:
+                    'Kunci API OpenAI ditolak. Periksa kunci di /connect.',
+            },
+        ]);
+    });
+
+    test('asks the user to log in when there are no credentials', async () => {        const events = await collect(
             run(
                 { message: 'halo' },
                 fakeFetch(() => new Response('x')),

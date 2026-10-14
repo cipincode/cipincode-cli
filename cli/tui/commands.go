@@ -18,7 +18,7 @@ var commands = []command{
 	{"status", "Lihat status akun, agent, dan mode"},
 	{"usage", "Lihat sisa jatah sesi 5 jam dan mingguan"},
 	{"effort", "Atur effort: low, medium, high, xhigh, ultra"},
-	{"connect", "Pilih penyedia API: Anthropic, OpenAI, dll."},
+	{"connect", "Pilih provider API + kunci langsung (opsional)"},
 	{"model", "Pilih model dari provider yang aktif"},
 	{"agent", "Pilih agent buatan Anda"},
 	{"whoami", "Lihat akun yang sedang login"},

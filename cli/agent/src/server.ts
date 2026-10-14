@@ -55,6 +55,7 @@ const server = Bun.serve({
                 effort?: unknown;
                 provider?: unknown;
                 model?: unknown;
+                provider_key?: unknown;
                 session?: unknown;
                 agent?: unknown;
             };
@@ -88,6 +89,11 @@ const server = Bun.serve({
                                 typeof body.model === 'string' &&
                                 body.model !== ''
                                     ? body.model
+                                    : undefined,
+                            providerKey:
+                                typeof body.provider_key === 'string' &&
+                                body.provider_key !== ''
+                                    ? body.provider_key
                                     : undefined,
                             session:
                                 typeof body.session === 'string'
