@@ -219,7 +219,7 @@ func (m model) handleAgents(msg agentsMsg) (tea.Model, tea.Cmd) {
 	m.agentChoices = msg.items
 	m.agentCursor = 0
 	for i, it := range msg.items { // kursor mulai di agent yang sedang aktif
-		if m.agent != nil && it.ID == m.chosen.ID {
+		if m.chosen != nil && it.ID == m.chosen.ID {
 			m.agentCursor = i + 1
 		}
 	}
