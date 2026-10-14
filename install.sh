@@ -45,14 +45,14 @@ TMP_DIR=$(mktemp -d)
 git clone https://github.com/cipincode/cipincode-cli.git "$TMP_DIR"
 cd "$TMP_DIR/cli/tui"
 go build -o "$CIPIN_HOME/bin/cipincode" .
+
+# Salin folder agent langsung dari repo yang di-clone agar 100% lengkap (termasuk src & dist)
+rm -rf "$CIPIN_HOME/agent"
+cp -R "$TMP_DIR/cli/agent" "$CIPIN_HOME/agent"
+
 rm -rf "$TMP_DIR"
 
 ln -sf "$CIPIN_HOME/bin/cipincode" "$INSTALL_DIR/cipincode"
-
-info "Mengunduh agent..."
-curl -fsSL "$DOMAIN/downloads/agent.tar.gz" -o "/tmp/agent.tar.gz"
-tar -xzf "/tmp/agent.tar.gz" -C "$CIPIN_HOME/agent"
-rm -f "/tmp/agent.tar.gz"
 
 # Tambahkan export otomatis ke zshrc / bashrc jika belum ada
 PROFILE="$HOME/.zshrc"
