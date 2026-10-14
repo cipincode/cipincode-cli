@@ -27,7 +27,7 @@ export type AgentEvent =
     | { type: 'error'; message: string }
     | { type: 'done' };
 
-import { streamDirect } from './direct';
+import { streamDirect } from './direct.js';
 
 export type RunInput = {
     message: string;
