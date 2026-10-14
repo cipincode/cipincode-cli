@@ -471,18 +471,48 @@ func renderCodeBlock(lang, code string, width int) string {
 		label = "kode"
 	}
 
-	code = strings.TrimRight(strings.ReplaceAll(code, "\t", "    "), "\n")
-	highlighted := highlightCode(code, lang)
+	// Deteksi diff / patch (git diff) untuk memperindah tampilan tambah/hapus baris
+	isDiff := lang == "diff" || lang == "patch" || strings.Contains(code, "\n+") || strings.Contains(code, "\n-")
 
-	panel := colorSeq(codeFg, codeBg)
+	code = strings.TrimRight(strings.ReplaceAll(code, "\t", "    "), "\n")
+	
 	var rows []string
-	for _, line := range strings.Split(highlighted, "\n") {
-		for _, part := range strings.Split(ansi.Hardwrap(line, inner, true), "\n") {
-			text := " " + part + strings.Repeat(" ", max(0, inner-ansi.StringWidth(part))) + " "
-			if panel != "" {
-				text = panel + strings.ReplaceAll(text, "\x1b[0m", "\x1b[0m"+panel) + "\x1b[0m"
+	if isDiff {
+		for _, line := range strings.Split(code, "\n") {
+			prefix := "  "
+			colorStyle := lipgloss.NewStyle().Foreground(codeFg)
+			if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+				prefix = "+ "
+				colorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1")) // Hijau lembut
+			} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
+				prefix = "- "
+				colorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8")) // Merah lembut
+			} else if strings.HasPrefix(line, "@@") {
+				colorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#89b4fa")).Bold(true)
 			}
-			rows = append(rows, mdBorder.Render("│")+text+mdBorder.Render("│"))
+
+			content := line
+			if (strings.HasPrefix(line, "+") || strings.HasPrefix(line, "-") || strings.HasPrefix(line, " ")) && (lang == "diff" || lang == "patch") {
+				content = line[1:]
+			}
+
+			formatted := colorStyle.Render(prefix + content)
+			for _, part := range strings.Split(ansi.Hardwrap(formatted, inner, true), "\n") {
+				text := " " + part + strings.Repeat(" ", max(0, inner-ansi.StringWidth(ansi.Strip(part)))) + " "
+				rows = append(rows, mdBorder.Render("│")+text+mdBorder.Render("│"))
+			}
+		}
+	} else {
+		highlighted := highlightCode(code, lang)
+		panel := colorSeq(codeFg, codeBg)
+		for _, line := range strings.Split(highlighted, "\n") {
+			for _, part := range strings.Split(ansi.Hardwrap(line, inner, true), "\n") {
+				text := " " + part + strings.Repeat(" ", max(0, inner-ansi.StringWidth(ansi.Strip(part)))) + " "
+				if panel != "" {
+					text = panel + strings.ReplaceAll(text, "\x1b[0m", "\x1b[0m"+panel) + "\x1b[0m"
+				}
+				rows = append(rows, mdBorder.Render("│")+text+mdBorder.Render("│"))
+			}
 		}
 	}
 
