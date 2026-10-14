@@ -25,6 +25,16 @@ esac
 
 info "Mendeteksi sistem: $GOOS-$GOARCH"
 
+# Ambil versi terbaru dari server agar binary melaporkan versi yang benar.
+# Gagal pun tidak apa-apa: bangun tanpa versi (bawaan 0.1.0).
+CLI_VERSION="$(curl -fsSL "$DOMAIN/api/cli/version" 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4)"
+if [ -z "$CLI_VERSION" ]; then
+  info "Tidak bisa mengecek versi terbaru, memakai bawaan."
+  CLI_VERSION="0.1.0"
+else
+  info "Versi terbaru: $CLI_VERSION"
+fi
+
 if ! command -v go &>/dev/null; then
   info "Go belum terpasang. Silakan install Go terlebih dahulu dari https://go.dev/dl/"
   exit 1
@@ -44,7 +54,7 @@ mkdir -p "$CIPIN_HOME/agent"
 TMP_DIR=$(mktemp -d)
 git clone https://github.com/cipincode/cipincode-cli.git "$TMP_DIR"
 cd "$TMP_DIR/cli/tui"
-go build -o "$CIPIN_HOME/bin/cipincode" .
+go build -ldflags "-X main.version=$CLI_VERSION" -o "$CIPIN_HOME/bin/cipincode" .
 
 # Salin folder agent langsung dari repo yang di-clone agar 100% lengkap (termasuk src & dist)
 rm -rf "$CIPIN_HOME/agent"

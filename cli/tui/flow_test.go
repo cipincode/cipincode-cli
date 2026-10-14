@@ -106,7 +106,7 @@ func TestMatchCommands(t *testing.T) {
 	if got := matchCommands("/"); len(got) != len(commands) {
 		t.Fatalf("'/' seharusnya menampilkan semua perintah, got %d", len(got))
 	}
-	if got := names(matchCommands("/co")); got != "coding" {
+	if got := names(matchCommands("/co")); got != "coding,connect" {
 		t.Fatalf("'/co' => %s", got)
 	}
 	if got := names(matchCommands("/lo")); got != "login,logout" {

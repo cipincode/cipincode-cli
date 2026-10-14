@@ -53,6 +53,8 @@ const server = Bun.serve({
                 history?: Message[];
                 mode?: unknown;
                 effort?: unknown;
+                provider?: unknown;
+                model?: unknown;
                 session?: unknown;
                 agent?: unknown;
             };
@@ -77,6 +79,16 @@ const server = Bun.serve({
                                 : [],
                             mode: parseMode(body.mode),
                             effort: parseEffort(body.effort),
+                            provider:
+                                typeof body.provider === 'string' &&
+                                body.provider !== ''
+                                    ? body.provider
+                                    : undefined,
+                            model:
+                                typeof body.model === 'string' &&
+                                body.model !== ''
+                                    ? body.model
+                                    : undefined,
                             session:
                                 typeof body.session === 'string'
                                     ? body.session

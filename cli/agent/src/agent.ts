@@ -32,6 +32,10 @@ export type RunInput = {
     history?: Message[];
     mode?: Mode;
     effort?: Effort;
+    /** ID provider API pilihan pengguna ("" = Otomatis ikut paket). */
+    provider?: string;
+    /** ID model pilihan pengguna ("" = bawaan provider). */
+    model?: string;
     /** UUID percakapan; server memakainya untuk mencatat riwayat. */
     session?: string;
     /** ID agent buatan pengguna yang sedang dipilih. */
@@ -82,6 +86,10 @@ export async function* run(
                     mode: input.mode ?? 'chat',
                     effort: input.effort ?? 'medium',
                     history: input.history ?? [],
+                    ...(input.provider
+                        ? { provider: input.provider }
+                        : null),
+                    ...(input.model ? { model: input.model } : null),
                 }),
             },
         );

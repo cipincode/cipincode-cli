@@ -93,6 +93,37 @@ describe('run', () => {
         });
     });
 
+    test('forwards provider and model when chosen', async () => {
+        let seen: { url: string; init: RequestInit } | undefined;
+        await collect(
+            run(
+                {
+                    message: 'halo',
+                    provider: 'anthropic',
+                    model: 'anthropic/claude-sonnet-4-5',
+                    credentials,
+                },
+                fakeFetch((url, init) => {
+                    seen = { url, init };
+                    return new Response(
+                        sseBody({ type: 'done' }),
+                        { status: 200 },
+                    );
+                }),
+            ),
+        );
+
+        const request = seen as unknown as { url: string; init: RequestInit };
+        expect(JSON.parse(request.init.body as string)).toEqual({
+            message: 'halo',
+            mode: 'chat',
+            effort: 'medium',
+            history: [],
+            provider: 'anthropic',
+            model: 'anthropic/claude-sonnet-4-5',
+        });
+    });
+
     test('asks the user to log in when there are no credentials', async () => {
         const events = await collect(
             run(

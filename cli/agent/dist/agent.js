@@ -41,6 +41,10 @@ export async function* run(input, fetchImpl = fetch) {
                 mode: input.mode ?? 'chat',
                 effort: input.effort ?? 'medium',
                 history: input.history ?? [],
+                ...(input.provider
+                    ? { provider: input.provider }
+                    : null),
+                ...(input.model ? { model: input.model } : null),
             }),
         });
     }

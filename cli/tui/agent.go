@@ -33,10 +33,12 @@ type historyItem struct {
 // chatRequest adalah satu giliran percakapan. URL dan Key (login pengguna) dikirim
 // lewat header agar agent bisa memanggil dashboard atas nama pengguna.
 type chatRequest struct {
-	Message string        `json:"message"`
-	Mode    string        `json:"mode"`
-	Effort  string        `json:"effort"`
-	Session string        `json:"session,omitempty"`
+	Message  string        `json:"message"`
+	Mode     string        `json:"mode"`
+	Effort   string        `json:"effort"`
+	Provider string        `json:"provider,omitempty"`
+	Model    string        `json:"model,omitempty"`
+	Session  string        `json:"session,omitempty"`
 	Agent   int           `json:"agent,omitempty"`
 	History []historyItem `json:"history"`
 	Cwd     string        `json:"cwd,omitempty"`

@@ -65,6 +65,12 @@ const server = createServer(async (req, res) => {
                 history: Array.isArray(body.history) ? body.history : [],
                 mode: parseMode(body.mode),
                 effort: parseEffort(body.effort),
+                provider: typeof body.provider === 'string' && body.provider !== ''
+                    ? body.provider
+                    : undefined,
+                model: typeof body.model === 'string' && body.model !== ''
+                    ? body.model
+                    : undefined,
                 session: typeof body.session === 'string' ? body.session : undefined,
                 agent: typeof body.agent === 'number' ? body.agent : undefined,
                 credentials,

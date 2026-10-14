@@ -17,6 +17,9 @@ const (
 	modalInfo   modalKind = iota // hanya dibaca: /usage, /status, /help
 	modalEffort                  // slider: ← → mengubah level
 	modalAgents                  // daftar pilihan agent: ↑↓ dan Enter
+	modalProviders               // daftar pilihan provider API: ↑↓ dan Enter
+	modalModels                  // daftar pilihan model: ↑↓ dan Enter
+	modalUpdate                  // pengingat update: Spasi centang, Enter update, Esc nanti
 )
 
 type modalView struct {
@@ -164,6 +167,12 @@ func (m model) keyModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.keyEffortModal(msg)
 	case modalAgents:
 		return m.keyAgentsModal(msg)
+	case modalProviders:
+		return m.keyProvidersModal(msg)
+	case modalModels:
+		return m.keyModelsModal(msg)
+	case modalUpdate:
+		return m.keyUpdateModal(msg)
 	}
 	v := *m.modal
 	limit := v.maxScroll(m.height)

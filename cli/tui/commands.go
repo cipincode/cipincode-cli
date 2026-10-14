@@ -18,6 +18,8 @@ var commands = []command{
 	{"status", "Lihat status akun, agent, dan mode"},
 	{"usage", "Lihat sisa jatah sesi 5 jam dan mingguan"},
 	{"effort", "Atur effort: low, medium, high, xhigh, ultra"},
+	{"connect", "Pilih penyedia API: Anthropic, OpenAI, dll."},
+	{"model", "Pilih model dari provider yang aktif"},
 	{"agent", "Pilih agent buatan Anda"},
 	{"whoami", "Lihat akun yang sedang login"},
 	{"login", "Masuk atau ganti akun"},
@@ -26,6 +28,7 @@ var commands = []command{
 	{"keys", "Buka halaman API Keys"},
 	{"setup", "Buka panduan instalasi"},
 	{"version", "Tampilkan versi CLI"},
+	{"update", "Periksa pembaruan versi terbaru"},
 	{"exit", "Keluar dari CipinCode"},
 }
 

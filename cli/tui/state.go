@@ -13,6 +13,10 @@ import (
 type State struct {
 	LastSession time.Time `json:"last_session"`
 	Effort      string    `json:"effort,omitempty"`
+	Provider    string    `json:"provider,omitempty"`
+	Model       string    `json:"model,omitempty"`
+	// SkippedVersion adalah versi yang tidak ingin diingatkan lagi.
+	SkippedVersion string `json:"skipped_version,omitempty"`
 }
 
 func statePath() (string, error) {
@@ -75,6 +79,57 @@ func saveEffort(e effort) {
 		return
 	}
 	state.Effort = e.key()
+	saveState(state)
+}
+
+// loadProvider membaca ID provider terakhir ("" berarti Otomatis).
+func loadProvider() string {
+	state, _ := loadState()
+	if parseProvider(state.Provider) == nil {
+		return ""
+	}
+	return state.Provider
+}
+
+func saveProvider(id string) {
+	state, ok := loadState()
+	if !ok {
+		return
+	}
+	state.Provider = id
+	saveState(state)
+}
+
+// loadModel membaca ID model terakhir yang masih dikenal ("" berarti bawaan provider).
+func loadModel() string {
+	state, _ := loadState()
+	if modelName(state.Model) == state.Model && state.Model != "" {
+		return ""
+	}
+	return state.Model
+}
+
+func saveModel(id string) {
+	state, ok := loadState()
+	if !ok {
+		return
+	}
+	state.Model = id
+	saveState(state)
+}
+
+// loadSkippedVersion membaca versi yang dilewati lewat checkbox update.
+func loadSkippedVersion() string {
+	state, _ := loadState()
+	return state.SkippedVersion
+}
+
+func saveSkippedVersion(v string) {
+	state, ok := loadState()
+	if !ok {
+		return
+	}
+	state.SkippedVersion = v
 	saveState(state)
 }
 

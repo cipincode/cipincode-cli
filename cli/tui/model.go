@@ -113,6 +113,13 @@ type model struct {
 	sel          *selection
 	agentChoices []agentItem
 	agentCursor  int
+	provider     string // ID provider API ("": Otomatis ikut paket)
+	modelID      string // ID model yang dipakai ("": bawaan provider)
+	providerCursor int
+	modelCursor    int
+	updateInfo     *versionInfo // info update yang sedang ditawarkan
+	updateSkip     bool         // checkbox "jangan ingatkan lagi"
+	updateManual   bool         // /update manual: laporkan juga bila sudah terbaru
 	toast        string
 	toastID      int
 
@@ -160,6 +167,8 @@ func newModel(agent *Agent, cfg *Config, lastSession time.Time, opts options) mo
 		urlOverride: opts.url,
 		mode:        modeChat,
 		effort:      loadEffort(),
+		provider:    loadProvider(),
+		modelID:     loadModel(),
 		sessionID:   newUUID(),
 		home:        true,
 		input:       in,
@@ -188,6 +197,7 @@ func (m model) Init() tea.Cmd {
 		cmds = append(cmds, animTick())
 	case screenChat:
 		cmds = append(cmds, textinput.Blink)
+		cmds = append(cmds, fetchVersionCmd(m.baseURL))
 		if m.config != nil {
 			cmds = append(cmds, fetchUsageCmd(m.config, false))
 		}
@@ -245,6 +255,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agentsMsg:
 		return m.handleAgents(msg)
+
+	case versionMsg:
+		return m.handleVersion(msg)
+
+	case updateDoneMsg:
+		return m.handleUpdateDone(msg)
 
 	case usageStreamMsg:
 		m.usage = msg.snap
@@ -394,15 +410,17 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 
 	cwd, _ := os.Getwd()
 	request := chatRequest{
-		Message: text,
-		Mode:    m.mode.key(),
-		Effort:  m.effort.key(),
-		Session: m.sessionID,
-		Agent:   m.activeAgentID(),
-		History: m.history(),
-		Cwd:     cwd,
-		URL:     m.config.URL,
-		Key:     m.config.Key,
+		Message:  text,
+		Mode:     m.mode.key(),
+		Effort:   m.effort.key(),
+		Provider: m.provider,
+		Model:    m.modelID,
+		Session:  m.sessionID,
+		Agent:    m.activeAgentID(),
+		History:  m.history(),
+		Cwd:      cwd,
+		URL:      m.config.URL,
+		Key:      m.config.Key,
 	}
 
 	m.home = false
@@ -531,6 +549,27 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 		m = m.note(roleSystem, fmt.Sprintf("Mode %s · %s", m.mode.name(), m.mode.description()))
 	case "effort":
 		m = m.openEffortModal()
+	case "connect":
+		m.providerCursor = 0
+		for i, p := range providers {
+			if p.id == m.provider {
+				m.providerCursor = i + 1
+			}
+		}
+		m = m.openProvidersModal()
+	case "model":
+		if parseProvider(m.provider) == nil {
+			m = m.note(roleSystem, "Belum ada provider. Pilih dulu dengan /connect.")
+		} else {
+			models := providerModels(m.provider)
+			m.modelCursor = 0
+			for i, mdl := range models {
+				if mdl.id == m.modelID {
+					m.modelCursor = i
+				}
+			}
+			m = m.openModelsModal()
+		}
 	case "agent":
 		if m.config == nil {
 			m = m.note(roleSystem, "Masuk dulu dengan /login untuk memakai agent.")
@@ -545,6 +584,12 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 		}
 	case "version":
 		m = m.openModal("Versi", "CipinCode CLI v"+version+"\n\n" + mutedStyle.Render("Tool AI terminal interaktif untuk developer."))
+	case "update":
+		m.updateManual = true
+		m = m.note(roleSystem, "Memeriksa pembaruan…")
+		m.layout()
+		m.refresh()
+		return m, fetchVersionCmd(m.baseURL)
 	case "whoami":
 		if m.config == nil {
 			m = m.note(roleSystem, "Belum login. Ketik /login untuk masuk.")
@@ -587,6 +632,8 @@ func helpText() string {
 	}
 	b.WriteString("\nMode (Shift+Tab untuk berganti): Chat · Coding · Debugging\n")
 	b.WriteString("Effort (/effort, lalu ← →): low · medium · high · xhigh · ultra\n")
+	b.WriteString("Provider (/connect): Otomatis atau Anthropic · OpenAI · Google · xAI · DeepSeek · Meta\n")
+	b.WriteString("Model (/model): daftar model dari provider yang aktif\n")
 	b.WriteString("Agent (/agent): pilih agent buatan Anda dari menu Agents di dashboard\n")
 	b.WriteString("Tombol: Enter kirim · Esc batalkan · PgUp/PgDn gulir · Ctrl+C keluar")
 	return b.String()
@@ -603,6 +650,8 @@ func (m model) statusText() string {
 		"Agent       " + m.agent.URL,
 		"Mode        " + m.mode.name() + " · " + m.mode.description(),
 		"Effort      " + m.effort.key() + " · " + m.effort.description(),
+		"Provider    " + providerName(m.provider),
+		"Model       " + modelName(m.modelID),
 		"Agent       " + m.agentName(),
 		"Sesi lalu   " + formatSession(m.lastSession),
 		"Versi       " + version,
