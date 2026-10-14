@@ -82,14 +82,23 @@ func (e event) snapshot() *usageSnapshot {
 // satu runtime yang rusak tidak langsung menggagalkan CLI. Log agent ditangkap
 // dan ditampilkan saat gagal agar mudah didiagnosis di laptop pengguna.
 func connectAgent(serverURL, agentDir string) (*Agent, error) {
-	if serverURL != "" {
-		a := &Agent{URL: strings.TrimRight(serverURL, "/"), Token: os.Getenv("CIPINCODE_AGENT_TOKEN")}
-		if err := a.waitHealthy(3 * time.Second); err != nil {
-			return nil, fmt.Errorf("agent di %s tidak merespons: %w. Periksa CIPINCODE_AGENT_URL atau jalankan tanpa --server", a.URL, err)
-		}
+	// Gunakan domain remote default jika tidak diset secara lokal agar CLI tidak perlu menjalankan server node lokal.
+	if serverURL == "" {
+		serverURL = os.Getenv("CIPINCODE_AGENT_URL")
+	}
+	if serverURL == "" {
+		serverURL = "https://cli.cipincode.com"
+	}
+	a := &Agent{URL: strings.TrimRight(serverURL, "/"), Token: os.Getenv("CIPINCODE_AGENT_TOKEN")}
+	if err := a.waitHealthy(5 * time.Second); err == nil {
 		return a, nil
 	}
 
+	if serverURL != "https://cli.cipincode.com" {
+		return nil, fmt.Errorf("agent di %s tidak merespons", a.URL)
+	}
+
+	// Fallback ke proses lokal jika domain utama tidak merespons
 	dir, err := findAgentDir(agentDir)
 	if err != nil {
 		return nil, err
