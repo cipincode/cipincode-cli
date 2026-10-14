@@ -22,12 +22,6 @@ jobs:
           - goos: linux
             goarch: arm64
             runner: ubuntu-24.04-arm
-          - goos: darwin
-            goarch: amd64
-            runner: macos-13
-          - goos: darwin
-            goarch: arm64
-            runner: macos-latest
           - goos: windows
             goarch: amd64
             runner: windows-latest
@@ -123,15 +117,9 @@ jobs:
             ```bash
             npm install -g cipincode
             ```
-
-            ### Manual download
-
-            Pilih binary sesuai platform di bawah.
           files: |
             artifacts/cipincode-linux-amd64
             artifacts/cipincode-linux-arm64
-            artifacts/cipincode-darwin-amd64
-            artifacts/cipincode-darwin-arm64
             artifacts/cipincode-windows-amd64.exe
             artifacts/agent.tar.gz
           fail_on_unmatched_files: true
