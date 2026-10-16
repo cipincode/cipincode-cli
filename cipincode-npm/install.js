@@ -11,7 +11,7 @@
  */
 
 import { execSync, spawnSync } from 'node:child_process';
-import { createWriteStream, existsSync, mkdirSync, chmodSync, rmSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, chmodSync, rmSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
@@ -22,7 +22,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Konfigurasi ─────────────────────────────────────────────────────────────
 
-const CIPINCODE_VERSION = process.env.CIPINCODE_VERSION || '0.1.0';
+const PKG_VERSION       = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')).version;
+const CIPINCODE_VERSION = process.env.CIPINCODE_VERSION || PKG_VERSION;
 const GITHUB_REPO       = 'cipincode/cipincode-cli';
 const RELEASES_BASE     = `https://github.com/${GITHUB_REPO}/releases/download/v${CIPINCODE_VERSION}`;
 
