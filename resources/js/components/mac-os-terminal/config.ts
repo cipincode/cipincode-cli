@@ -14,7 +14,7 @@ export type OutputItem =
   | { type: "spinner"; text: string; doneText: string; delay: number; duration: number }
 
 export const PROMPT = "user@cipincode ~ % "
-export const COMMAND = "curl -fsSL https://cli.cipincode.com/install.sh | bash"
+export const COMMAND = "npm install -g cipincode"
 export const TYPE_SPEED = 38
 export const TYPE_CODE_MS = 11
 export const TYPE_CODE_NEWLINE_MS = 48

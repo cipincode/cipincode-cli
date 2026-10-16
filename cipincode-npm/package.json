@@ -12,7 +12,12 @@
   "engines": {
     "node": ">=18"
   },
-  "keywords": ["cipincode", "cli", "ai", "agent"],
+  "keywords": [
+    "cipincode",
+    "cli",
+    "ai",
+    "agent"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/cipincode/cipincode-cli"

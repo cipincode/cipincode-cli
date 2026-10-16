@@ -17,7 +17,7 @@ const steps: Step[] = [
         title: 'Pasang CipinCode CLI',
         description:
             'Satu perintah ini otomatis memasang Go, Bun, dan binary CipinCode CLI sesuai sistem operasi Anda (Linux & macOS).',
-        command: 'curl -fsSL https://cli.cipincode.com/install.sh | bash',
+        command: 'npm install -g cipincode',
     },
     {
         n: 2,

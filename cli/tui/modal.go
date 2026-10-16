@@ -14,13 +14,14 @@ import (
 type modalKind int
 
 const (
-	modalInfo   modalKind = iota // hanya dibaca: /usage, /status, /help
-	modalEffort                  // slider: ← → mengubah level
-	modalAgents                  // daftar pilihan agent: ↑↓ dan Enter
-	modalProviders               // daftar pilihan provider API: ↑↓ dan Enter
-	modalModels                  // daftar pilihan model: ↑↓ dan Enter
-	modalConnect                 // konfirmasi provider + kunci API langsung
-	modalUpdate                  // pengingat update: Spasi centang, Enter update, Esc nanti
+	modalInfo         modalKind = iota // hanya dibaca: /usage, /status, /help
+	modalEffort                        // slider: ← → mengubah level
+	modalAgents                        // daftar pilihan agent: ↑↓ dan Enter
+	modalProviders                     // daftar pilihan provider API: ↑↓ dan Enter
+	modalModels                        // daftar pilihan model: ↑↓ dan Enter
+	modalConnect                       // konfirmasi provider + kunci API langsung
+	modalClaudeMethod                  // pilih cara terhubung Anthropic: akun Claude / kunci API / server
+	modalUpdate                        // pengingat update: Spasi centang, Enter update, Esc nanti
 )
 
 type modalView struct {
@@ -174,6 +175,8 @@ func (m model) keyModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.keyModelsModal(msg)
 	case modalConnect:
 		return m.keyConnectModal(msg)
+	case modalClaudeMethod:
+		return m.keyClaudeMethodModal(msg)
 	case modalUpdate:
 		return m.keyUpdateModal(msg)
 	}

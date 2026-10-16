@@ -77,11 +77,21 @@ func TestSelectProviderOpensConnectModal(t *testing.T) {
 	m := openConnect(t, newScreen(t, screenChat, loggedIn(""), ""))
 
 	m, _ = update(m, key(tea.KeyDown)) // kursor ke Anthropic
-	m, cmd := update(m, key(tea.KeyEnter))
-	_ = cmd
+	m, _ = update(m, key(tea.KeyEnter))
+
+	if m.modal == nil || m.modal.kind != modalClaudeMethod {
+		t.Fatal("Enter pada Anthropic seharusnya membuka pilihan metode")
+	}
+	for _, want := range []string{"Akun Claude", "Kunci API", "Via server"} {
+		if !strings.Contains(plain(m), want) {
+			t.Errorf("modal metode tidak memuat %q", want)
+		}
+	}
+	m, _ = update(m, key(tea.KeyDown)) // Kunci API
+	m, _ = update(m, key(tea.KeyEnter))
 
 	if m.modal == nil || m.modal.kind != modalConnect {
-		t.Fatal("Enter seharusnya membuka modal connect, bukan catatan biasa")
+		t.Fatal("Kunci API seharusnya membuka modal connect")
 	}
 	view := plain(m)
 	for _, want := range []string{"Connect · Anthropic", "API kini memakai Claude Sonnet 4.5 (Anthropic)", "Kunci"} {
@@ -152,6 +162,8 @@ func TestConnectModalSaveSkipsKey(t *testing.T) {
 		m := openConnect(t, newScreen(t, screenChat, loggedIn(""), ""))
 		m, _ = update(m, key(tea.KeyDown))
 		m, _ = update(m, key(tea.KeyEnter))
+		m, _ = update(m, key(tea.KeyDown)) // metode: Kunci API
+		m, _ = update(m, key(tea.KeyEnter))
 		return m
 	}
 
@@ -201,5 +213,39 @@ func TestMetaProviderHasNoDirectKey(t *testing.T) {
 	}
 	if m.provider != "meta" {
 		t.Fatalf("provider = %q, seharusnya meta", m.provider)
+	}
+}
+
+func TestClaudeAccountSelectedAfterLogin(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	m := openConnect(t, newScreen(t, screenChat, loggedIn(""), ""))
+	m, _ = update(m, key(tea.KeyDown))
+	m, _ = update(m, key(tea.KeyEnter)) // Anthropic -> pilihan metode
+
+	if m.useClaudeAccount() {
+		t.Fatal("belum login, seharusnya belum memakai akun Claude")
+	}
+	m.config.ClaudeAccount = true
+	if !m.useClaudeAccount() {
+		t.Fatal("ClaudeAccount aktif + provider anthropic seharusnya memakai akun Claude")
+	}
+	m.provider = "openai"
+	if m.useClaudeAccount() {
+		t.Fatal("provider lain tidak boleh memakai akun Claude")
+	}
+}
+
+func TestClaudePromptAndArgs(t *testing.T) {
+	p := claudePrompt([]historyItem{{"user", "hai"}, {"assistant", "halo"}}, "apa kabar")
+	for _, want := range []string{"Pengguna: hai", "Asisten: halo", "apa kabar"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("prompt tidak memuat %q:\n%s", want, p)
+		}
+	}
+	args := strings.Join(claudeArgs(chatRequest{Mode: "coding", Model: "anthropic/claude-sonnet-4-5"}), " ")
+	for _, want := range []string{"-p", "stream-json", "--model claude-sonnet-4-5-20250929", "expert coding assistant"} {
+		if !strings.Contains(args, want) {
+			t.Errorf("args tidak memuat %q: %s", want, args)
+		}
 	}
 }

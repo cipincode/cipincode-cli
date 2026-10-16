@@ -213,7 +213,7 @@ export default function Docs() {
                                             Go, Bun, dan binary CipinCode CLI
                                             di Linux &amp; macOS.
                                         </p>
-                                        <CodeBlock command="curl -fsSL https://cli.cipincode.com/install.sh | bash" />
+                                        <CodeBlock command="npm install -g cipincode" />
                                     </li>
                                     <li className="rounded-2xl border border-border bg-card p-5">
                                         <p className="font-medium">

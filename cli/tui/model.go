@@ -94,36 +94,37 @@ type model struct {
 	urlOverride string
 
 	// chat
-	mode         mode
-	effort       effort
-	sessionID    string
-	chosen       *agentItem // agent buatan pengguna yang dipilih lewat /agent
-	home         bool
-	messages     []message
-	input        textinput.Model
-	viewport     viewport.Model
-	spinner      spinner.Model
-	stream       chan tea.Msg
-	cancel       context.CancelFunc
-	streaming    bool
-	menuIndex    int
-	usage        *usageSnapshot
-	pending      string // pesan yang sedang diproses, dikembalikan ke input jika diblokir
-	modal        *modalView
-	sel          *selection
-	agentChoices []agentItem
-	agentCursor  int
-	provider     string // ID provider API ("": Otomatis ikut paket)
-	modelID      string // ID model yang dipakai ("": bawaan provider)
+	mode           mode
+	effort         effort
+	sessionID      string
+	chosen         *agentItem // agent buatan pengguna yang dipilih lewat /agent
+	home           bool
+	messages       []message
+	input          textinput.Model
+	viewport       viewport.Model
+	spinner        spinner.Model
+	stream         chan tea.Msg
+	cancel         context.CancelFunc
+	streaming      bool
+	menuIndex      int
+	usage          *usageSnapshot
+	pending        string // pesan yang sedang diproses, dikembalikan ke input jika diblokir
+	modal          *modalView
+	sel            *selection
+	agentChoices   []agentItem
+	agentCursor    int
+	provider       string // ID provider API ("": Otomatis ikut paket)
+	modelID        string // ID model yang dipakai ("": bawaan provider)
 	providerCursor int
 	modelCursor    int
-	connectPending *provider      // provider yang menunggu kunci API di modal
+	claudeCursor   int             // pilihan di modal metode Anthropic
+	connectPending *provider       // provider yang menunggu kunci API di modal
 	connectInput   textinput.Model // kolom kunci API di modal connect
-	updateInfo     *versionInfo // info update yang sedang ditawarkan
-	updateSkip     bool         // checkbox "jangan ingatkan lagi"
-	updateManual   bool         // /update manual: laporkan juga bila sudah terbaru
-	toast        string
-	toastID      int
+	updateInfo     *versionInfo    // info update yang sedang ditawarkan
+	updateSkip     bool            // checkbox "jangan ingatkan lagi"
+	updateManual   bool            // /update manual: laporkan juga bila sudah terbaru
+	toast          string
+	toastID        int
 
 	// onboarding dan login
 	frame       int
@@ -230,6 +231,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 
+	case claudeLoginMsg:
+		return m.handleClaudeLogin(msg)
 	case browserMsg:
 		m.browser = 1
 		if msg.err != nil {
@@ -418,12 +421,12 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 		Provider:    m.provider,
 		Model:       m.modelID,
 		ProviderKey: m.providerKey(),
-		Session:  m.sessionID,
-		Agent:    m.activeAgentID(),
-		History:  m.history(),
-		Cwd:      cwd,
-		URL:      m.config.URL,
-		Key:      m.config.Key,
+		Session:     m.sessionID,
+		Agent:       m.activeAgentID(),
+		History:     m.history(),
+		Cwd:         cwd,
+		URL:         m.config.URL,
+		Key:         m.config.Key,
 	}
 
 	m.home = false
@@ -439,7 +442,7 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 	m.stream = make(chan tea.Msg, 64)
-	go streamChat(ctx, m.agent, request, m.stream)
+	go streamChat(ctx, m.agent, request, m.useClaudeAccount(), m.stream)
 
 	return m, waitForStream(m.stream)
 }
@@ -586,7 +589,7 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 			return m, fetchUsageCmd(m.config, true)
 		}
 	case "version":
-		m = m.openModal("Versi", "CipinCode CLI v"+version+"\n\n" + mutedStyle.Render("Tool AI terminal interaktif untuk developer."))
+		m = m.openModal("Versi", "CipinCode CLI v"+version+"\n\n"+mutedStyle.Render("Tool AI terminal interaktif untuk developer."))
 	case "update":
 		m.updateManual = true
 		m = m.note(roleSystem, "Memeriksa pembaruan…")
@@ -674,6 +677,9 @@ func (m model) agentName() string {
 func (m model) apiModeText() string {
 	if m.provider == "" {
 		return "via CipinCode (ikut paket)"
+	}
+	if m.useClaudeAccount() {
+		return "akun Claude (Pro/Max) lewat Claude Code"
 	}
 	if m.providerKey() != "" {
 		return "langsung ke " + providerName(m.provider) + " (kunci Anda)"
@@ -964,13 +970,17 @@ func padRight(s string, width int) string {
 	return s
 }
 
-func streamChat(ctx context.Context, agent *Agent, request chatRequest, out chan<- tea.Msg) {
+func streamChat(ctx context.Context, agent *Agent, request chatRequest, claude bool, out chan<- tea.Msg) {
 	defer close(out)
 
 	events := make(chan chatEvent, 64)
 	errc := make(chan error, 1)
 	go func() {
-		errc <- agent.Chat(ctx, request, events)
+		if claude {
+			errc <- chatClaude(ctx, request, events)
+		} else {
+			errc <- agent.Chat(ctx, request, events)
+		}
 		close(events)
 	}()
 

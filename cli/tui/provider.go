@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -320,17 +320,26 @@ func (m model) selectProvider() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	m.connectPending = &providers[m.providerCursor-1]
+	if p.id == "anthropic" {
+		m.claudeCursor = 0
+		return m.openClaudeMethodModal(), nil
+	}
+	cmd := m.startKeyEntry()
+	return m, cmd
+}
+
+// startKeyEntry membuka modal tempel kunci API untuk connectPending.
+func (m *model) startKeyEntry() tea.Cmd {
 	keyIn := textinput.New()
 	keyIn.Prompt = "Kunci ❯ "
 	keyIn.EchoMode = textinput.EchoPassword
 	keyIn.CharLimit = 200
 	keyIn.Width = 40
 	keyIn.Focus()
-	m.connectPending = &providers[m.providerCursor-1]
 	m.connectInput = keyIn
-
-	m = m.openConnectModal()
-	return m, textinput.Blink
+	*m = m.openConnectModal()
+	return textinput.Blink
 }
 
 // providerKey mengembalikan kunci API milik pengguna untuk provider aktif.
@@ -345,7 +354,7 @@ func (m model) providerKey() string {
 func connectModalBody(p *provider, modelID, typed string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Provider: %s · API kini memakai %s (%s)\n\n", p.name, modelName(modelID), p.name)
-	b.WriteString("Punya akun Pro di " + p.name + "? Tempel kunci API agar\n")
+	b.WriteString("Punya kunci API " + p.name + "? Tempel agar\n")
 	b.WriteString("terhubung langsung (tanpa lewat server dan kuota).\n")
 	b.WriteString("Kosongkan untuk tetap via server CipinCode.\n\n")
 	b.WriteString("Kunci ❯ " + typed + "\n\n")
@@ -409,6 +418,7 @@ func (m model) saveConnectKey() model {
 			delete(m.config.ProviderKeys, p.id)
 		} else {
 			m.config.ProviderKeys[p.id] = key
+			m.config.ClaudeAccount = false
 		}
 		_ = saveConfig(*m.config)
 	}

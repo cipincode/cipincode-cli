@@ -17,6 +17,9 @@ type Config struct {
 	// ProviderKeys adalah kunci API milik pengguna per provider
 	// (BYOK) agar bisa terhubung langsung tanpa lewat server.
 	ProviderKeys map[string]string `json:"provider_keys,omitempty"`
+	// ClaudeAccount: Anthropic dipakai lewat akun Claude Pro/Max
+	// (Claude Code lokal), bukan kunci API.
+	ClaudeAccount bool `json:"claude_account,omitempty"`
 }
 
 func configPath() (string, error) {

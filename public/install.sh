@@ -68,29 +68,30 @@ git clone https://github.com/cipincode/cipincode-cli.git "$TMP_DIR"
 cd "$TMP_DIR/cli/tui"
 go build -ldflags "-X main.version=$CLI_VERSION" -o "$CIPIN_HOME/bin/cipincode" .
 
-# Pastikan dist/server.node.js ada agar mode Node jalan tanpa Bun.
-if [ ! -f "$TMP_DIR/cli/agent/dist/server.node.js" ]; then
-  info "Membangun agent (dist)..."
-  (cd "$TMP_DIR/cli/agent" && (npx -y -p typescript tsc -p tsconfig.node.json || bun x tsc -p tsconfig.node.json)) || info "Gagal build dist; CLI akan memakai Bun saat jalan."
-fi
+# Selalu bangun ulang dist agar tidak pernah usang
+info "Membangun agent (dist)..."
+(cd "$TMP_DIR/cli/agent" && (npm install && (npx tsc -p tsconfig.node.json || npx -y typescript tsc -p tsconfig.node.json || bun x tsc -p tsconfig.node.json))) || error "Gagal membangun agent dist."
 
 # Salin folder agent langsung dari repo yang di-clone agar 100% lengkap (termasuk src & dist).
-# node_modules tidak ikut agar ringan.
 rm -rf "$CIPIN_HOME/agent"
 mkdir -p "$CIPIN_HOME/agent"
 cp -R "$TMP_DIR/cli/agent/src" "$CIPIN_HOME/agent/"
 [ -d "$TMP_DIR/cli/agent/dist" ] && cp -R "$TMP_DIR/cli/agent/dist" "$CIPIN_HOME/agent/"
 cp "$TMP_DIR/cli/agent/package.json" "$CIPIN_HOME/agent/"
 [ -f "$TMP_DIR/cli/agent/tsconfig.node.json" ] && cp "$TMP_DIR/cli/agent/tsconfig.node.json" "$CIPIN_HOME/agent/"
-(cd "$CIPIN_HOME/agent" && (npm install --production 2>/dev/null || true))
+(cd "$CIPIN_HOME/agent" && npm install --production)
 
 rm -rf "$TMP_DIR"
 
 ln -sf "$CIPIN_HOME/bin/cipincode" "$INSTALL_DIR/cipincode"
 
-# Tambahkan export otomatis ke zshrc / bashrc jika belum ada
-PROFILE="$HOME/.zshrc"
-[ -f "$HOME/.bashrc" ] && PROFILE="$HOME/.bashrc"
+# Pilih file profil berdasarkan shell yang aktif ($SHELL)
+PROFILE="$HOME/.bashrc"
+case "$SHELL" in
+  */zsh) PROFILE="$HOME/.zshrc" ;;
+  */bash) PROFILE="$HOME/.bashrc" ;;
+  */fish) PROFILE="$HOME/.config/fish/config.fish" ;;
+esac
 
 if ! grep -q "CIPINCODE_AGENT_DIR" "$PROFILE" 2>/dev/null; then
   info "Menambahkan CIPINCODE_AGENT_DIR ke $PROFILE..."

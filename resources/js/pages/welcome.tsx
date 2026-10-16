@@ -80,10 +80,10 @@ export default function Welcome() {
                         <div className="bg-[#050507] rounded-xl p-4 font-mono text-sm text-zinc-200 flex items-center justify-between overflow-x-auto border border-zinc-800/50">
                             <span className="text-orange-400">$</span>
                             <span className="flex-1 px-3 text-left selection:bg-orange-500/30">
-                                curl -fsSL https://cli.cipincode.com/install.sh | bash
+                                npm install -g cipincode
                             </span>
                             <button
-                                onClick={() => navigator.clipboard.writeText("curl -fsSL https://cli.cipincode.com/install.sh | bash")}
+                                onClick={() => navigator.clipboard.writeText("npm install -g cipincode")}
                                 className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors"
                             >
                                 Copy
