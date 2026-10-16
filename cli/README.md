@@ -194,8 +194,10 @@ menampilkan "OPENROUTER_API_KEY belum diisi" dan jatah tidak terpotong.
 
 Percakapan dikirim beserta 20 giliran terakhir sebagai konteks. Pesan butuh login. Jatah
 dipotong **setelah** OpenRouter menerima permintaan, jadi galat di layanan AI tidak
-menghabiskan jatah. Agent belum bisa membaca atau mengubah file; mode Coding menulis kode
-dalam blok markdown untuk disalin.
+menghabiskan jatah. Mode Coding/Debugging bisa menjalankan perintah shell
+(`execute_command`, maks 5 per giliran, 30 detik tiap perintah): CLI menjalankannya
+otomatis di komputer Anda lalu mengirim hasilnya kembali ke AI (maks 4 langkah
+beruntun). Mode Chat hanya menampilkan pratinjau perintah untuk disalin manual.
 
 Untuk pengembangan tanpa jaringan: `CIPINCODE_AGENT_STUB=1` membuat agent membalas teks contoh.
 

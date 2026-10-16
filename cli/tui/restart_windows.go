@@ -8,3 +8,6 @@ import "errors"
 func restartSelf() error {
 	return errors.New("restart otomatis belum didukung di Windows")
 }
+
+// restartSelfFn bisa diganti di tes agar tidak benar-benar exec.
+var restartSelfFn = restartSelf

@@ -16,3 +16,6 @@ func restartSelf() error {
 	}
 	return syscall.Exec(exe, os.Args, os.Environ())
 }
+
+// restartSelfFn bisa diganti di tes agar tidak benar-benar exec.
+var restartSelfFn = restartSelf

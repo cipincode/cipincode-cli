@@ -9,15 +9,14 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.7'),
+    'version' => env('CLI_VERSION', '0.2.8'),
 
     'changelog' => [
         'added' => [
-            'Chat via server kembali lewat agent lokal sehingga tidak lagi 404',
-            'Login ulang mempertahankan kunci API dan akun Claude yang sudah dipilih',
+            'Mode Coding/Debugging kini benar-benar menjalankan perintah shell AI (execute_command) otomatis dan memakai hasilnya',
         ],
         'fixed' => [
-            'Hapus default agent remote yang tidak ada servernya; --server tetap didukung eksplisit',
+            'System prompt server memberi tahu model soal kemampuan shell; mode Chat tetap pratinjau saja',
         ],
     ],
 ];

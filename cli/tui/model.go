@@ -106,6 +106,7 @@ type model struct {
 	stream         chan tea.Msg
 	cancel         context.CancelFunc
 	streaming      bool
+	toolDepth      int // langkah tool beruntun (reset tiap pesan baru)
 	menuIndex      int
 	usage          *usageSnapshot
 	pending        string // pesan yang sedang diproses, dikembalikan ke input jika diblokir
@@ -275,6 +276,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case updateDoneMsg:
 		return m.handleUpdateDone(msg)
 
+	case restartMsg:
+		return m.handleRestart()
+
 	case usageStreamMsg:
 		m.usage = msg.snap
 		return m, waitForStream(m.stream)
@@ -291,7 +295,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.streaming = false
 		m.cancel = nil
 		m.refresh()
-		return m, nil
+		return m.maybeRunTools()
+
+	case toolResultMsg:
+		return m.handleToolResults(msg)
 
 	case errMsg:
 		m.streaming = false
@@ -421,23 +428,10 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 	}
 	m.input.Reset()
 
-	cwd, _ := os.Getwd()
-	request := chatRequest{
-		Message:     text,
-		Mode:        m.mode.key(),
-		Effort:      m.effort.key(),
-		Provider:    m.provider,
-		Model:       m.modelID,
-		ProviderKey: m.providerKey(),
-		Session:     m.sessionID,
-		Agent:       m.activeAgentID(),
-		History:     m.history(),
-		Cwd:         cwd,
-		URL:         m.config.URL,
-		Key:         m.config.Key,
-	}
+	request := m.newChatRequest(text)
 
 	m.home = false
+	m.toolDepth = 0
 	m.pending = text
 	m.messages = append(m.messages,
 		message{role: roleUser, content: text},
@@ -451,6 +445,77 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 	m.cancel = cancel
 	m.stream = make(chan tea.Msg, 64)
 	go streamChat(ctx, m.agent, request, m.useClaudeAccount(), m.stream)
+
+	return m, waitForStream(m.stream)
+}
+
+// newChatRequest menyusun permintaan chat dari state saat ini.
+func (m model) newChatRequest(text string) chatRequest {
+	cwd, _ := os.Getwd()
+	return chatRequest{
+		Message:     text,
+		Mode:        m.mode.key(),
+		Effort:      m.effort.key(),
+		Provider:    m.provider,
+		Model:       m.modelID,
+		ProviderKey: m.providerKey(),
+		Session:     m.sessionID,
+		Agent:       m.activeAgentID(),
+		History:     m.history(),
+		Cwd:         cwd,
+		URL:         m.config.URL,
+		Key:         m.config.Key,
+	}
+}
+
+// lastAssistantText adalah jawaban AI terakhir yang tidak kosong.
+func (m model) lastAssistantText() string {
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		if m.messages[i].role == roleAssistant && m.messages[i].content != "" {
+			return m.messages[i].content
+		}
+	}
+	return ""
+}
+
+// maybeRunTools menjalankan execute_command dari jawaban AI secara otomatis
+// di mode Coding/Debugging, lalu mengirim hasilnya kembali sebagai lanjutan.
+// Mode Chat hanya menampilkan pratinjau. Berhenti setelah maxToolDepth langkah.
+func (m model) maybeRunTools() (tea.Model, tea.Cmd) {
+	if m.mode != modeCoding && m.mode != modeDebug {
+		return m, nil
+	}
+	calls := shellCalls(m.lastAssistantText())
+	if len(calls) == 0 {
+		return m, nil
+	}
+	if m.toolDepth >= maxToolDepth {
+		m = m.note(roleSystem, "Berhenti otomatis setelah 4 langkah perintah. Lanjutkan manual bila perlu.")
+		m.layout()
+		m.refresh()
+		return m, nil
+	}
+	m.toolDepth++
+	m = m.note(roleSystem, fmt.Sprintf("⚙ Menjalankan %d perintah…", len(calls)))
+	m.layout()
+	m.refresh()
+	return m, runToolsCmd(calls)
+}
+
+// handleToolResults mengirim hasil eksekusi kembali ke AI sebagai lanjutan.
+func (m model) handleToolResults(msg toolResultMsg) (tea.Model, tea.Cmd) {
+	m.messages = append(m.messages,
+		message{role: roleUser, content: msg.results},
+		message{role: roleAssistant, content: ""},
+	)
+	m.streaming = true
+	m.layout()
+	m.refresh()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel = cancel
+	m.stream = make(chan tea.Msg, 64)
+	go streamChat(ctx, m.agent, m.newChatRequest(msg.results), m.useClaudeAccount(), m.stream)
 
 	return m, waitForStream(m.stream)
 }
@@ -552,9 +617,9 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 	case "exit", "quit":
 		return m, tea.Quit
 	case "clear":
-		m.messages, m.home, m.sessionID = nil, false, newUUID()
+		m.messages, m.home, m.sessionID, m.toolDepth = nil, false, newUUID(), 0
 	case "new":
-		m.messages, m.home, m.sessionID = nil, true, newUUID()
+		m.messages, m.home, m.sessionID, m.toolDepth = nil, true, newUUID(), 0
 	case "help":
 		m = m.openModal("Bantuan", helpText())
 	case "chat", "coding", "debug":

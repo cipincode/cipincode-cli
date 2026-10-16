@@ -269,7 +269,7 @@ func (m model) handleUpdateDone(msg updateDoneMsg) (tea.Model, tea.Cmd) {
 // versi terbaru langsung jalan tanpa tutup-buka manual. Auth dan pengaturan
 // tetap dipakai karena tersimpan di ~/.config/cipincode.
 func (m model) handleRestart() (tea.Model, tea.Cmd) {
-	if err := restartSelf(); err != nil {
+	if err := restartSelfFn(); err != nil {
 		m = m.note(roleError, "Restart otomatis gagal: "+err.Error()+". Tutup lalu buka cipincode lagi.")
 		m.layout()
 		m.refresh()

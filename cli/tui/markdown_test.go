@@ -352,7 +352,7 @@ func TestEmptyAndTinyInputsDoNotPanic(t *testing.T) {
 func TestToolCallsRenderAsBox(t *testing.T) {
 	src := "Jalankan ini:\n<function_calls>\n<invoke name=\"execute_command\">\n<parameter name=\"command\">ls -la</parameter>\n</invoke>\n</function_calls>\nSelesai."
 	got := md(src)
-	for _, want := range []string{"execute_command", "command: ls -la", "⚙", "belum dijalankan"} {
+	for _, want := range []string{"execute_command", "command: ls -la", "⚙", "Otomatis dijalankan"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("kotak tool tidak memuat %q:\n%s", want, got)
 		}

@@ -36,8 +36,19 @@ func TestUpdateDoneSuccessSchedulesRestart(t *testing.T) {
 	if view := plain(m); !strings.Contains(view, "Me-restart") {
 		t.Errorf("seharusnya ada catatan restart otomatis:\n%s", view)
 	}
-	m, _ = update(m, cmd())
-	if view := plain(m); !strings.Contains(view, "Me-restart") {
-		t.Errorf("tick restart seharusnya mempertahankan catatan:\n%s", view)
+
+	// restartMsg memakai stub agar tes tidak benar-benar exec.
+	old := restartSelfFn
+	restartSelfFn = func() error { return nil }
+	defer func() { restartSelfFn = old }()
+	m, _ = update(m, restartMsg{})
+	if view := plain(m); strings.Contains(view, "Restart otomatis gagal") {
+		t.Errorf("restart stub sukses tidak boleh error:\n%s", view)
+	}
+
+	restartSelfFn = func() error { return errors.New("macet") }
+	m, _ = update(m, restartMsg{})
+	if view := plain(m); !strings.Contains(view, "Restart otomatis gagal") {
+		t.Errorf("restart gagal harus menyuruh buka manual:\n%s", view)
 	}
 }

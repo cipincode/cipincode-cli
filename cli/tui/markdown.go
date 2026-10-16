@@ -509,7 +509,7 @@ func renderToolCalls(src string, width int) string {
 		bottom := mdBorder.Render("└" + strings.Repeat("─", width-2) + "┘")
 		out = append(out, top+"\n"+strings.Join(rows, "\n")+"\n"+bottom)
 	}
-	out = append(out, mdQuote.Render("(Perintah di atas belum dijalankan — salin dan jalankan sendiri bila perlu.)"))
+	out = append(out, mdQuote.Render("(Otomatis dijalankan di mode Coding/Debugging; di mode Chat, salin dan jalankan sendiri.)"))
 	return strings.Join(out, "\n")
 }
 

@@ -44,4 +44,11 @@ class EffortTest extends TestCase
         $this->assertStringContainsString('effort sangat tinggi', $prompt);
         $this->assertSame(ChatPrompts::system('chat'), ChatPrompts::system('chat', 'medium'));
     }
+
+    public function test_shell_tool_offered_in_coding_and_debugging_only(): void
+    {
+        $this->assertStringContainsString('execute_command', ChatPrompts::system('coding'));
+        $this->assertStringContainsString('execute_command', ChatPrompts::system('debugging'));
+        $this->assertStringNotContainsString('execute_command', ChatPrompts::system('chat'));
+    }
 }
