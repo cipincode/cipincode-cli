@@ -9,19 +9,13 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.1'),
+    'version' => env('CLI_VERSION', '0.2.2'),
 
     'changelog' => [
-        'added' => [
-            'Login akun Claude (Pro/Max) lewat browser di /connect → Anthropic, tanpa kunci API',
-            'Perintah /connect — pilih penyedia API (Anthropic, OpenAI, Google, xAI, DeepSeek, Meta) dari modal',
-            'Perintah /model — pilih model dari provider yang sedang aktif',
-            'Modal pengingat update otomatis dengan checkbox jangan ingatkan lagi',
-        ],
+        'added' => [],
         'fixed' => [
-            'Opsi kunci API Anthropic dihapus dari /connect; gunakan akun Claude atau via server',
-            'Pilihan provider dan model kini tersimpan antar sesi',
-            'Paket gratis selalu memakai model gratis walau ada pilihan lain',
+            'Perbaikan proses rilis npm (Trusted Publishing OIDC, Node 22) agar `npm update -g cipincode` lebih andal',
+            'Sinkron versi 0.2.2 di binary, installer, dan server agar pengingat update muncul tepat',
         ],
     ],
 ];
