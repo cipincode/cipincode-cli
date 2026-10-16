@@ -9,14 +9,15 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.4'),
+    'version' => env('CLI_VERSION', '0.2.5'),
 
     'changelog' => [
         'added' => [
-            '/model kini memuat daftar langsung dari akun provider Anda bila tersambung dengan kunci sendiri (disaring ke model obrolan, nama ramah bila dikenal)',
+            '/usage kini mengikuti akun provider saat mode langsung (akun Claude / kunci sendiri), bukan jatah server 5 jam',
+            'Panggilan tool AI (mis. execute_command) tampil sebagai kotak rapi, bukan XML mentah',
         ],
         'fixed' => [
-            'Bila akun provider tidak bisa dihubungi, /model otomatis memakai katalog bawaan',
+            'Header chat menandai mode langsung agar tidak tertukar dengan kuota server',
         ],
     ],
 ];

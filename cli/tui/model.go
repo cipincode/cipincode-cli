@@ -263,6 +263,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case agentsMsg:
 		return m.handleAgents(msg)
 
+	case claudeUsageMsg:
+		return m.handleClaudeUsage(msg)
+
 	case modelsMsg:
 		return m.handleModels(msg)
 
@@ -598,6 +601,10 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 	case "usage":
 		if m.config == nil {
 			m = m.note(roleSystem, "Masuk dulu dengan /login untuk melihat pemakaian.")
+		} else if m.directMode() && m.useClaudeAccount() {
+			return m, claudeUsageCmd()
+		} else if m.directMode() {
+			m = m.openModal("Pemakaian · "+providerName(m.provider), m.directUsageBody(nil))
 		} else {
 			return m, fetchUsageCmd(m.config, true)
 		}
@@ -701,6 +708,9 @@ func (m model) apiModeText() string {
 }
 
 func (m model) usageSummary() string {
+	if m.directMode() {
+		return "\nPemakaian   langsung via " + providerName(m.provider) + ", jatah server tidak terpotong (ketik /usage)"
+	}
 	if m.usage == nil {
 		return ""
 	}
@@ -908,9 +918,17 @@ func (m model) header() string {
 }
 
 // usageLine: ringkasan pemakaian di header; kosong jika belum login.
+// Mode langsung menampilkan akun provider, bukan batang kuota server.
 func (m model) usageLine() string {
 	if m.config == nil {
 		return ""
+	}
+	if m.directMode() {
+		via := "kunci Anda"
+		if m.useClaudeAccount() {
+			via = "akun Claude"
+		}
+		return mutedStyle.Render("Langsung · " + providerName(m.provider) + " (" + via + ") · tanpa jatah server")
 	}
 	return usageHeaderLine(m.usage)
 }

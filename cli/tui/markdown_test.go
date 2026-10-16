@@ -348,3 +348,37 @@ func TestEmptyAndTinyInputsDoNotPanic(t *testing.T) {
 		}
 	}
 }
+
+func TestToolCallsRenderAsBox(t *testing.T) {
+	src := "Jalankan ini:\n<function_calls>\n<invoke name=\"execute_command\">\n<parameter name=\"command\">ls -la</parameter>\n</invoke>\n</function_calls>\nSelesai."
+	got := md(src)
+	for _, want := range []string{"execute_command", "command: ls -la", "⚙", "belum dijalankan"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("kotak tool tidak memuat %q:\n%s", want, got)
+		}
+	}
+	for _, raw := range []string{"<invoke", "<parameter", "</invoke>", "<function_calls>"} {
+		if strings.Contains(got, raw) {
+			t.Errorf("XML mentah %q seharusnya hilang:\n%s", raw, got)
+		}
+	}
+}
+
+func TestBareInvokeWithoutWrapper(t *testing.T) {
+	src := "<invoke name=\"execute_command\">\n<parameter name=\"command\">tree -L 2 -a</parameter>\n</invoke>"
+	got := md(src)
+	if !strings.Contains(got, "execute_command") || !strings.Contains(got, "tree -L 2 -a") {
+		t.Errorf("invoke tanpa pembungkus harus tetap rapi:\n%s", got)
+	}
+}
+
+func TestUnclosedToolCallWhileStreaming(t *testing.T) {
+	src := "<function_calls>\n<invoke name=\"execute_command\">\n<parameter name=\"command\">ls -la"
+	got := md(src)
+	if !strings.Contains(got, "execute_command") || !strings.Contains(got, "ls -la") {
+		t.Errorf("blok tool yang belum tertutup harus tetap tampil:\n%s", got)
+	}
+	if strings.Contains(got, "<invoke") {
+		t.Errorf("XML mentah seharusnya hilang:\n%s", got)
+	}
+}

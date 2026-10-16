@@ -50,6 +50,14 @@ var (
 	reTable   = regexp.MustCompile(`^\s*\|.*\|\s*$`)
 	reTableSp = regexp.MustCompile(`^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$`)
 	reTask    = regexp.MustCompile(`^\[( |x|X)\]\s+(.*)$`)
+	// Panggilan tool dari AI (mis. <function_calls><invoke name="execute_command">…).
+	// Dibungkus rapi agar tidak tampil sebagai XML mentah.
+	reToolOpen   = regexp.MustCompile(`(?i)^\s*(<function_calls>\s*)?<invoke\s+name="[^"]*"\s*>\s*$`)
+	reToolCalls  = regexp.MustCompile(`(?i)^\s*<function_calls>\s*$`)
+	reInvoke     = regexp.MustCompile(`(?is)<invoke\s+name="([^"]*)"\s*>(.*?)</invoke>`)
+	reInvokeName = regexp.MustCompile(`(?i)<invoke\s+name="([^"]*)"`)
+	reParam      = regexp.MustCompile(`(?is)<parameter\s+name="([^"]*)"\s*>(.*?)</parameter>`)
+	reParamOpen  = regexp.MustCompile(`(?i)<parameter\s+name="([^"]*)"\s*>`)
 )
 
 func wrapText(s string, width int) string {
@@ -80,6 +88,21 @@ func renderMarkdown(src string, width int) string {
 		switch {
 		case strings.TrimSpace(line) == "":
 			i++
+
+		case reToolCalls.MatchString(line) || reToolOpen.MatchString(line):
+			var block []string
+			if !reToolCalls.MatchString(line) {
+				block = append(block, line) // <invoke> tanpa pembungkus
+			}
+			i++
+			for i < len(lines) && !isToolEnd(lines[i]) {
+				block = append(block, lines[i])
+				i++
+			}
+			if i < len(lines) {
+				i++ // lewati penutup (atau akhir teks jika belum tertutup, mis. saat streaming)
+			}
+			add("tool", renderToolCalls(strings.Join(block, "\n"), width))
 
 		case reFence.MatchString(line):
 			m := reFence.FindStringSubmatch(line)
@@ -147,6 +170,8 @@ func isFenceEnd(line, marker string) bool {
 func startsBlock(line string, lines []string, i int) bool {
 	switch {
 	case reFence.MatchString(line), reHeading.MatchString(line), reQuote.MatchString(line):
+		return true
+	case reToolCalls.MatchString(line), reToolOpen.MatchString(line):
 		return true
 	case reList.MatchString(line):
 		return true
@@ -408,6 +433,84 @@ func parseLink(r []rune, i int) (text, url string, next int, ok bool) {
 		return "", "", 0, false
 	}
 	return text, url, end + 1, true
+}
+
+// ---- panggilan tool ----
+
+type toolCall struct {
+	name   string
+	params [][2]string
+}
+
+// parseToolCalls membaca blok <invoke name="…"><parameter name="…">…</parameter></invoke>.
+// Blok yang belum tertutup (saat streaming) tetap diproses seadanya.
+func parseToolCalls(src string) []toolCall {
+	var calls []toolCall
+	for _, m := range reInvoke.FindAllStringSubmatch(src, -1) {
+		call := toolCall{name: strings.TrimSpace(m[1])}
+		for _, p := range reParam.FindAllStringSubmatch(m[2], -1) {
+			call.params = append(call.params, [2]string{strings.TrimSpace(p[1]), strings.TrimSpace(p[2])})
+		}
+		calls = append(calls, call)
+	}
+	if len(calls) > 0 {
+		return calls
+	}
+	if m := reInvokeName.FindStringSubmatch(src); m != nil {
+		call := toolCall{name: strings.TrimSpace(m[1])}
+		rest := src[strings.Index(src, m[0])+len(m[0]):]
+		for _, p := range reParam.FindAllStringSubmatch(rest, -1) {
+			call.params = append(call.params, [2]string{strings.TrimSpace(p[1]), strings.TrimSpace(p[2])})
+		}
+		if len(call.params) == 0 {
+			if po := reParamOpen.FindStringSubmatch(rest); po != nil {
+				val := strings.TrimSpace(strings.ReplaceAll(rest[strings.Index(rest, po[0])+len(po[0]):], "</parameter>", ""))
+				call.params = append(call.params, [2]string{strings.TrimSpace(po[1]), val})
+			}
+		}
+		calls = append(calls, call)
+	}
+	return calls
+}
+
+func isToolEnd(line string) bool {
+	t := strings.ToLower(strings.TrimSpace(line))
+	return t == "</function_calls>" || t == "</invoke>"
+}
+
+// renderToolCalls menggambar panggilan tool AI sebagai kotak: nama tool di
+// judul dan parameter sebagai baris, plus penanda bahwa perintah belum dijalankan.
+func renderToolCalls(src string, width int) string {
+	calls := parseToolCalls(src)
+	if len(calls) == 0 {
+		return wrapText(strings.TrimSpace(src), width)
+	}
+	width = min(max(width, 24), maxCodeWidth)
+	inner := width - 4
+
+	var out []string
+	for _, call := range calls {
+		name := call.name
+		if name == "" {
+			name = "tool"
+		}
+		title := "⚙ " + name
+		var rows []string
+		for _, p := range call.params {
+			for _, part := range strings.Split(ansi.Hardwrap(p[0]+": "+p[1], inner, true), "\n") {
+				text := " " + part + strings.Repeat(" ", max(0, inner-ansi.StringWidth(ansi.Strip(part)))) + " "
+				rows = append(rows, mdBorder.Render("│")+text+mdBorder.Render("│"))
+			}
+		}
+		if len(rows) == 0 {
+			rows = append(rows, mdBorder.Render("│")+strings.Repeat(" ", inner+2)+mdBorder.Render("│"))
+		}
+		top := mdBorder.Render("┌─ ") + mdLabel.Render(title) + mdBorder.Render(" "+strings.Repeat("─", max(1, width-ansi.StringWidth(title)-5))+"┐")
+		bottom := mdBorder.Render("└" + strings.Repeat("─", width-2) + "┘")
+		out = append(out, top+"\n"+strings.Join(rows, "\n")+"\n"+bottom)
+	}
+	out = append(out, mdQuote.Render("(Perintah di atas belum dijalankan — salin dan jalankan sendiri bila perlu.)"))
+	return strings.Join(out, "\n")
 }
 
 // ---- blok kode ----

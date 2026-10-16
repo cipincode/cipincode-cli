@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -86,6 +87,71 @@ func fetchUsage(baseURL, key string) (*usageSnapshot, error) {
 		return nil, errInvalidKey
 	}
 	return nil, fmt.Errorf("server membalas status %d", resp.StatusCode)
+}
+
+// ---- mode langsung (akun provider sendiri) ----
+
+// directMode: chat lewat akun provider sendiri (kunci API atau akun Claude),
+// sehingga jatah server 5 jam/mingguan tidak terpotong dan tidak berlaku.
+func (m model) directMode() bool {
+	return m.provider != "" && (m.providerKey() != "" || m.useClaudeAccount())
+}
+
+func maskKey(key string) string {
+	if len(key) <= 7 {
+		return "••••"
+	}
+	return key[:3] + "…" + key[len(key)-4:]
+}
+
+// directUsageBody: isi /usage saat mode langsung — status akun provider,
+// bukan batang kuota server.
+func (m model) directUsageBody(st *claudeStatus) string {
+	var b strings.Builder
+	b.WriteString(boldStyle.Render("Mode langsung · " + providerName(m.provider)))
+	b.WriteString(mutedStyle.Render(" — pemakaian mengikuti akun provider, jatah server tidak terpotong."))
+	b.WriteString("\n\n")
+	if m.useClaudeAccount() {
+		label := "akun Claude"
+		if st != nil {
+			label = st.label()
+		}
+		b.WriteString(padRight(boldStyle.Render("Akun"), 14) + label)
+		if st != nil && st.AuthMethod != "" {
+			b.WriteString("\n" + padRight(boldStyle.Render("Login"), 14) + mutedStyle.Render("Claude Code ("+st.AuthMethod+")"))
+		}
+	} else {
+		b.WriteString(padRight(boldStyle.Render("Kunci"), 14) + mutedStyle.Render(maskKey(m.providerKey())))
+	}
+	if m.modelID != "" {
+		b.WriteString("\n" + padRight(boldStyle.Render("Model"), 14) + modelName(m.modelID) + mutedStyle.Render(" · "+m.modelID))
+	}
+	b.WriteString("\n\n" + mutedStyle.Render("Ketik /connect untuk ganti akun, /model untuk ganti model."))
+	return b.String()
+}
+
+type claudeUsageMsg struct {
+	st  *claudeStatus
+	err error
+}
+
+func claudeUsageCmd() tea.Cmd {
+	return func() tea.Msg {
+		st, err := claudeAuthStatus()
+		return claudeUsageMsg{st: st, err: err}
+	}
+}
+
+func (m model) handleClaudeUsage(msg claudeUsageMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil || msg.st == nil || !msg.st.LoggedIn {
+		m = m.openModal("Pemakaian · akun Claude",
+			m.directUsageBody(nil)+"\n\n"+errorStyle.Render("Tidak bisa membaca status login Claude. Jalankan /connect → Anthropic → Auth Login."))
+	} else {
+		m = m.openModal("Pemakaian · akun Claude", m.directUsageBody(msg.st))
+	}
+	m.layout()
+	m.refresh()
+	return m, nil
 }
 
 // ---- tampilan ----

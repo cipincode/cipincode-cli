@@ -1,6 +1,6 @@
 .PHONY: build dev test install clean
 
-VERSION ?= 0.2.4
+VERSION ?= 0.2.5
 
 # Build binary ke cli/bin/cipincode (plus dist/server.node.js agar mode Node jalan tanpa Bun)
 build:
