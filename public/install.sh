@@ -1,103 +1,75 @@
 #!/usr/bin/env bash
-set -e
+# Pasang CipinCode CLI tanpa npm maupun Go: unduh binary + agent dari GitHub Releases.
+#
+#   curl -fsSL https://cli.cipincode.com/install.sh | bash
+#
+set -euo pipefail
 
-DOMAIN="https://cli.cipincode.com"
-INSTALL_DIR="$HOME/.local/bin"
-CIPIN_HOME="$HOME/.local/share/cipincode"
+DOMAIN="${CIPINCODE_URL:-https://cli.cipincode.com}"
+REPO="cipincode/cipincode-cli"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
+CIPIN_HOME="${CIPINCODE_HOME:-$HOME/.local/share/cipincode}"
 
 info() { printf "\033[1;38;5;166m==>\033[0m %s\n" "$1"; }
 error() { printf "\033[31mError:\033[0m %s\n" "$1"; exit 1; }
 
+command -v curl >/dev/null 2>&1 || error "curl belum terpasang."
+command -v tar >/dev/null 2>&1 || error "tar belum terpasang."
+
+# Deteksi OS/arch lalu petakan ke nama asset di GitHub Releases.
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m)"
-
 case "$OS" in
   linux) GOOS="linux" ;;
   darwin) GOOS="darwin" ;;
-  *) error "OS tidak didukung: $OS" ;;
+  *) error "OS tidak didukung: $OS (unduh manual di https://github.com/$REPO/releases/latest)" ;;
 esac
-
 case "$ARCH" in
   x86_64|amd64) GOARCH="amd64" ;;
   arm64|aarch64) GOARCH="arm64" ;;
   *) error "Arsitektur tidak didukung: $ARCH" ;;
 esac
+ASSET="cipincode-${GOOS}-${GOARCH}"
+info "Mendeteksi sistem: ${GOOS}-${GOARCH}"
 
-info "Mendeteksi sistem: $GOOS-$GOARCH"
-
-# Ambil versi terbaru dari server agar binary melaporkan versi yang benar.
-# Gagal pun tidak apa-apa: bangun tanpa versi (bawaan 0.1.0).
-CLI_VERSION="$(curl -fsSL "$DOMAIN/api/cli/version" 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4)"
+# Versi terbaru dari server (sumber kebenaran untuk modal update di CLI).
+# Fallback ke tag rilis GitHub terbaru bila server tidak bisa dihubungi.
+CLI_VERSION="$(curl -fsSL "$DOMAIN/api/cli/version" 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4 || true)"
 if [ -z "$CLI_VERSION" ]; then
-  info "Tidak bisa mengecek versi terbaru, memakai bawaan."
-  CLI_VERSION="0.1.0"
-else
-  info "Versi terbaru: $CLI_VERSION"
+  TAG_URL="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest" 2>/dev/null || true)"
+  CLI_VERSION="${TAG_URL##*/tag/}"
+  CLI_VERSION="${CLI_VERSION#v}"
 fi
+[ -n "$CLI_VERSION" ] || error "Tidak bisa menentukan versi terbaru."
+info "Versi terbaru: $CLI_VERSION"
 
-if ! command -v go &>/dev/null; then
-  info "Go belum terpasang. Silakan install Go terlebih dahulu dari https://go.dev/dl/"
-  exit 1
-fi
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
-# CLI mengutamakan Node (dist/server.node.js), fallback ke Bun (src/server.ts).
-# Cukup salah satu; pasang Node bila keduanya belum ada.
-if ! command -v node &>/dev/null && ! command -v bun &>/dev/null; then
-  if command -v brew &>/dev/null; then
-    info "Menginstall Node via brew..."
-    brew install node
-  else
-    info "Silakan install Node.js 18+ dari https://nodejs.org lalu jalankan ulang installer ini."
-    exit 1
-  fi
-fi
+info "Mengunduh binary $ASSET v$CLI_VERSION..."
+curl -fsSL -o "$TMP_DIR/cipincode" "https://github.com/$REPO/releases/download/v$CLI_VERSION/$ASSET" || error "Unduhan binary gagal. Cek https://github.com/$REPO/releases/tag/v$CLI_VERSION"
+chmod +x "$TMP_DIR/cipincode"
 
-if ! command -v bun &>/dev/null; then
-  export PATH="$HOME/.bun/bin:$PATH"
-fi
-command -v node &>/dev/null && info "Node $(node --version)" || true
-command -v bun &>/dev/null && info "Bun $(bun --version)" || info "Bun tidak ada (opsional, fallback saja)"
+info "Mengunduh agent..."
+curl -fsSL -o "$TMP_DIR/agent.tar.gz" "https://github.com/$REPO/releases/download/v$CLI_VERSION/agent.tar.gz" || error "Unduhan agent gagal."
 
-info "Mendownload dan memasang CipinCode CLI..."
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$CIPIN_HOME/bin"
-mkdir -p "$CIPIN_HOME/agent"
-
-TMP_DIR=$(mktemp -d)
-git clone https://github.com/cipincode/cipincode-cli.git "$TMP_DIR"
-cd "$TMP_DIR/cli/tui"
-go build -ldflags "-X main.version=$CLI_VERSION" -o "$CIPIN_HOME/bin/cipincode" .
-
-# Selalu bangun ulang dist agar tidak pernah usang
-info "Membangun agent (dist)..."
-(cd "$TMP_DIR/cli/agent" && (npm install && (npx tsc -p tsconfig.node.json || npx -y typescript tsc -p tsconfig.node.json || bun x tsc -p tsconfig.node.json))) || error "Gagal membangun agent dist."
-
-# Salin folder agent langsung dari repo yang di-clone agar 100% lengkap (termasuk src & dist).
+mkdir -p "$CIPIN_HOME/bin" "$INSTALL_DIR"
+mv "$TMP_DIR/cipincode" "$CIPIN_HOME/bin/cipincode"
 rm -rf "$CIPIN_HOME/agent"
 mkdir -p "$CIPIN_HOME/agent"
-cp -R "$TMP_DIR/cli/agent/src" "$CIPIN_HOME/agent/"
-[ -d "$TMP_DIR/cli/agent/dist" ] && cp -R "$TMP_DIR/cli/agent/dist" "$CIPIN_HOME/agent/"
-cp "$TMP_DIR/cli/agent/package.json" "$CIPIN_HOME/agent/"
-[ -f "$TMP_DIR/cli/agent/tsconfig.node.json" ] && cp "$TMP_DIR/cli/agent/tsconfig.node.json" "$CIPIN_HOME/agent/"
-(cd "$CIPIN_HOME/agent" && npm install --production)
-
-rm -rf "$TMP_DIR"
+tar -xzf "$TMP_DIR/agent.tar.gz" -C "$CIPIN_HOME/agent"
 
 ln -sf "$CIPIN_HOME/bin/cipincode" "$INSTALL_DIR/cipincode"
 
-# Pilih file profil berdasarkan shell yang aktif ($SHELL)
-PROFILE="$HOME/.bashrc"
-case "$SHELL" in
-  */zsh) PROFILE="$HOME/.zshrc" ;;
-  */bash) PROFILE="$HOME/.bashrc" ;;
-  */fish) PROFILE="$HOME/.config/fish/config.fish" ;;
+info "Verifikasi: $("$INSTALL_DIR/cipincode" --version)"
+
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*) ;;
+  *) info "Tambahkan ke PATH di ~/.bashrc atau ~/.zshrc: export PATH=\"$INSTALL_DIR:\$PATH\"" ;;
 esac
 
-if ! grep -q "CIPINCODE_AGENT_DIR" "$PROFILE" 2>/dev/null; then
-  info "Menambahkan CIPINCODE_AGENT_DIR ke $PROFILE..."
-  echo "" >> "$PROFILE"
-  echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$PROFILE"
-  echo "export CIPINCODE_AGENT_DIR=\"$CIPIN_HOME/agent\"" >> "$PROFILE"
+if ! command -v node >/dev/null 2>&1 && ! command -v bun >/dev/null 2>&1; then
+  info "Catatan: Node.js 18+ (atau Bun) hanya dibutuhkan bila memakai agent lokal (CIPINCODE_LOCAL_AGENT=1). Bawaan memakai agent remote sehingga langsung bisa jalan."
 fi
 
 info "Selesai! Jalankan: cipincode"
