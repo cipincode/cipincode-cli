@@ -150,6 +150,9 @@ jobs:
     name: Publish npm
     needs: release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # Trusted Publishing (OIDC), tanpa NPM_TOKEN
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -157,8 +160,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm (Trusted Publishing butuh npm >= 11.5.1)
+        run: npm install -g npm@latest
 
       - name: Set version
         working-directory: cipincode-npm
@@ -169,5 +175,3 @@ jobs:
       - name: Publish ke npm
         working-directory: cipincode-npm
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
