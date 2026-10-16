@@ -43,6 +43,22 @@ fi
 [ -n "$CLI_VERSION" ] || error "Tidak bisa menentukan versi terbaru."
 info "Versi terbaru: $CLI_VERSION"
 
+# Jika binary versi server belum selesai di-build, fallback ke rilis stabil
+# terbaru yang sudah ada asset-nya agar install tidak gagal di tengah jalan.
+ASSET_URL="https://github.com/$REPO/releases/download/v$CLI_VERSION/$ASSET"
+if ! curl -fsSL -o /dev/null "$ASSET_URL" 2>/dev/null; then
+  info "Binary v$CLI_VERSION belum tersedia, memakai rilis stabil terbaru…"
+  TAG_URL="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest" 2>/dev/null || true)"
+  FALLBACK="${TAG_URL##*/tag/}"
+  FALLBACK="${FALLBACK#v}"
+  if [ -n "$FALLBACK" ] && [ "$FALLBACK" != "$CLI_VERSION" ]; then
+    CLI_VERSION="$FALLBACK"
+    info "Memakai versi: $CLI_VERSION (0.2.7 menyusul begitu build selesai)"
+  else
+    error "Binary v$CLI_VERSION belum tersedia. Tunggu beberapa menit lalu jalankan lagi."
+  fi
+fi
+
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -69,7 +85,7 @@ case ":$PATH:" in
 esac
 
 if ! command -v node >/dev/null 2>&1 && ! command -v bun >/dev/null 2>&1; then
-  info "Catatan: Node.js 18+ (atau Bun) hanya dibutuhkan bila memakai agent lokal (CIPINCODE_LOCAL_AGENT=1). Bawaan memakai agent remote sehingga langsung bisa jalan."
+  info "Catatan: pasang Node.js 18+ (atau Bun) agar mode via server bisa jalan — agent lokal membutuhkannya. Mode akun Claude tetap jalan tanpa itu."
 fi
 
 info "Selesai! Jalankan: cipincode"
