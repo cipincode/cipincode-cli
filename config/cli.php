@@ -9,14 +9,14 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.8'),
+    'version' => env('CLI_VERSION', '0.2.9'),
 
     'changelog' => [
         'added' => [
-            'Mode Coding/Debugging kini benar-benar menjalankan perintah shell AI (execute_command) otomatis dan memakai hasilnya',
+            'Status shell di bawah kolom input: bulatan kuning + jumlah saat berjalan, hijau saat selesai',
         ],
         'fixed' => [
-            'System prompt server memberi tahu model soal kemampuan shell; mode Chat tetap pratinjau saja',
+            'Counter shell di-reset tiap pesan baru agar status selalu akurat',
         ],
     ],
 ];

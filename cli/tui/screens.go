@@ -13,6 +13,8 @@ var (
 	greenStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#34d399"))
 	linkStyle  = lipgloss.NewStyle().Foreground(orange).Underline(true)
 	boldStyle  = lipgloss.NewStyle().Bold(true)
+	// toolBusyStyle: bulatan kuning status shell yang sedang berjalan.
+	toolBusyStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#eab308"))
 )
 
 // ---- onboarding (animasi sambutan) ----

@@ -42,7 +42,10 @@ func shellCalls(src string) []shellCall {
 	return out
 }
 
-type toolResultMsg struct{ results string }
+type toolResultMsg struct {
+	results string
+	n       int // jumlah shell yang dijalankan
+}
 
 // runToolsCmd menjalankan perintah shell lalu mengembalikan hasilnya
 // sebagai pesan lanjutan untuk AI.
@@ -54,7 +57,7 @@ func runToolsCmd(calls []shellCall) tea.Cmd {
 			out, code := runShell(c.command)
 			fmt.Fprintf(&b, "\n$ %s\n%s\n(keluar: %d)\n", c.command, out, code)
 		}
-		return toolResultMsg{results: strings.TrimRight(b.String(), "\n")}
+		return toolResultMsg{results: strings.TrimRight(b.String(), "\n"), n: len(calls)}
 	}
 }
 

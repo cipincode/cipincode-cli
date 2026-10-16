@@ -91,3 +91,23 @@ func TestToolLoopSkippedInChatAndAtDepthCap(t *testing.T) {
 		t.Errorf("seharusnya ada catatan berhenti:\n%s", view)
 	}
 }
+
+func TestToolStatusBulletsBelowInput(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	m := newScreen(t, screenChat, loggedIn(""), "")
+
+	m.toolsRunning = 2
+	if view := plain(m); !strings.Contains(view, "● 2 shell berjalan") {
+		t.Errorf("seharusnya ada bulatan kuning 2 shell berjalan:\n%s", view)
+	}
+
+	m.toolsRunning, m.toolsDone = 0, 3
+	if view := plain(m); !strings.Contains(view, "● 3 shell selesai") {
+		t.Errorf("seharusnya ada bulatan hijau 3 shell selesai:\n%s", view)
+	}
+
+	m.toolsRunning, m.toolsDone = 0, 0
+	if view := plain(m); strings.Contains(view, "shell berjalan") || strings.Contains(view, "shell selesai") {
+		t.Errorf("tanpa tool seharusnya tidak ada status shell:\n%s", view)
+	}
+}

@@ -107,6 +107,8 @@ type model struct {
 	cancel         context.CancelFunc
 	streaming      bool
 	toolDepth      int // langkah tool beruntun (reset tiap pesan baru)
+	toolsRunning   int // shell yang sedang berjalan (bulatan kuning di bawah input)
+	toolsDone      int // shell yang baru selesai (bulatan hijau di bawah input)
 	menuIndex      int
 	usage          *usageSnapshot
 	pending        string // pesan yang sedang diproses, dikembalikan ke input jika diblokir
@@ -432,6 +434,7 @@ func (m model) submit() (tea.Model, tea.Cmd) {
 
 	m.home = false
 	m.toolDepth = 0
+	m.toolsRunning, m.toolsDone = 0, 0
 	m.pending = text
 	m.messages = append(m.messages,
 		message{role: roleUser, content: text},
@@ -496,6 +499,8 @@ func (m model) maybeRunTools() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.toolDepth++
+	m.toolsRunning = len(calls)
+	m.toolsDone = 0
 	m = m.note(roleSystem, fmt.Sprintf("⚙ Menjalankan %d perintah…", len(calls)))
 	m.layout()
 	m.refresh()
@@ -504,6 +509,8 @@ func (m model) maybeRunTools() (tea.Model, tea.Cmd) {
 
 // handleToolResults mengirim hasil eksekusi kembali ke AI sebagai lanjutan.
 func (m model) handleToolResults(msg toolResultMsg) (tea.Model, tea.Cmd) {
+	m.toolsRunning = 0
+	m.toolsDone = msg.n
 	m.messages = append(m.messages,
 		message{role: roleUser, content: msg.results},
 		message{role: roleAssistant, content: ""},
@@ -618,8 +625,10 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "clear":
 		m.messages, m.home, m.sessionID, m.toolDepth = nil, false, newUUID(), 0
+		m.toolsRunning, m.toolsDone = 0, 0
 	case "new":
 		m.messages, m.home, m.sessionID, m.toolDepth = nil, true, newUUID(), 0
+		m.toolsRunning, m.toolsDone = 0, 0
 	case "help":
 		m = m.openModal("Bantuan", helpText())
 	case "chat", "coding", "debug":
@@ -1048,6 +1057,14 @@ func (m model) footer() string {
 		status = m.spinner.View() + mutedStyle.Render(" menjawab · Esc untuk membatalkan")
 	case len(m.menuItems()) > 0:
 		status = mutedStyle.Render("↑↓ pilih · Tab lengkapi · Enter jalankan · Esc tutup")
+	}
+	// Status shell di bawah input: bulatan kuning + jumlah saat berjalan,
+	// bulatan hijau saat sudah selesai.
+	switch {
+	case m.toolsRunning > 0:
+		status += " · " + toolBusyStyle.Render(fmt.Sprintf("● %d shell berjalan…", m.toolsRunning))
+	case m.toolsDone > 0:
+		status += " · " + greenStyle.Render(fmt.Sprintf("● %d shell selesai", m.toolsDone))
 	}
 	return label + "\n" + box + "\n" + status
 }
