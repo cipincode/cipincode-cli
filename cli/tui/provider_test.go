@@ -82,13 +82,29 @@ func TestSelectProviderOpensConnectModal(t *testing.T) {
 	if m.modal == nil || m.modal.kind != modalClaudeMethod {
 		t.Fatal("Enter pada Anthropic seharusnya membuka pilihan metode")
 	}
-	for _, want := range []string{"Akun Claude", "Via server"} {
+	for _, want := range []string{"Auth Login", "API Key", "Via server"} {
 		if !strings.Contains(plain(m), want) {
 			t.Errorf("modal metode tidak memuat %q", want)
 		}
 	}
-	if strings.Contains(plain(m), "Kunci API") {
-		t.Error("modal metode Anthropic tidak boleh menawarkan kunci API")
+}
+
+// Pilih API Key pada Anthropic membuka kolom tempel kunci.
+func TestClaudeMethodAPIKeyOpensKeyEntry(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	m := openConnect(t, newScreen(t, screenChat, loggedIn(""), ""))
+
+	m, _ = update(m, key(tea.KeyDown))
+	m, _ = update(m, key(tea.KeyEnter)) // Anthropic -> pilihan metode
+
+	m, _ = update(m, key(tea.KeyDown)) // kursor ke API Key
+	m, cmd := update(m, key(tea.KeyEnter))
+
+	if m.modal == nil || m.modal.kind != modalConnect {
+		t.Fatal("API Key seharusnya membuka kolom tempel kunci")
+	}
+	if cmd == nil {
+		t.Error("seharusnya ada perintah blink untuk kolom kunci")
 	}
 }
 

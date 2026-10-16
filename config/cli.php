@@ -9,13 +9,14 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.2'),
+    'version' => env('CLI_VERSION', '0.2.3'),
 
     'changelog' => [
-        'added' => [],
+        'added' => [
+            'Pilihan Auth Login dan API Key di /connect → Anthropic: login Pro/Max lewat browser (link resmi claude.ai) atau tempel kunci sendiri',
+        ],
         'fixed' => [
-            'Perbaikan proses rilis npm (Trusted Publishing OIDC, Node 22) agar `npm update -g cipincode` lebih andal',
-            'Sinkron versi 0.2.2 di binary, installer, dan server agar pengingat update muncul tepat',
+            'Opsi API Key Anthropic dikembalikan agar bisa langsung dengan kunci sendiri tanpa lewat server',
         ],
     ],
 ];

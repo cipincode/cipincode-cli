@@ -106,7 +106,8 @@ var errNeedLogin = errors.New("belum login akun Claude")
 type claudeChoice struct{ name, desc string }
 
 var claudeChoices = []claudeChoice{
-	{"Akun Claude", "login Pro/Max lewat browser (tanpa kunci API)"},
+	{"Auth Login", "login Pro/Max lewat browser (tanpa kunci API)"},
+	{"API Key", "tempel kunci dari console.anthropic.com"},
 	{"Via server", "tetap lewat server CipinCode"},
 }
 
@@ -171,6 +172,9 @@ func (m model) chooseClaudeMethod() (tea.Model, tea.Cmd) {
 		m.layout()
 		m.refresh()
 		return m, claudeCheckCmd()
+	case 1:
+		cmd := m.startKeyEntry()
+		return m, cmd
 	}
 	m.modal = nil
 	m.connectPending = nil
@@ -317,7 +321,7 @@ func claudeErrorText(s string) string {
 	low := strings.ToLower(s)
 	switch {
 	case strings.Contains(low, "login") || strings.Contains(low, "authenticat") || strings.Contains(low, "401"):
-		return "Sesi akun Claude habis. Jalankan /connect → Anthropic → Akun Claude untuk login lagi."
+		return "Sesi akun Claude habis. Jalankan /connect → Anthropic → Auth Login untuk login lagi."
 	case strings.Contains(low, "limit"):
 		return "Batas pemakaian akun Claude tercapai: " + s
 	}

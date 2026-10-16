@@ -1,6 +1,6 @@
 {
   "name": "cipincode",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "CipinCode CLI – pasang dengan satu perintah",
   "license": "MIT",
   "scripts": {
