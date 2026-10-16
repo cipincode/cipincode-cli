@@ -83,11 +83,12 @@ func runLogin(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := saveConfig(Config{URL: *url, Key: *key, Name: user.Name, Email: user.Email}); err != nil {
+	cfg, err := saveLogin(*url, *key, user.Name, user.Email)
+	if err != nil {
 		return fmt.Errorf("menyimpan login: %w", err)
 	}
 
-	fmt.Printf("✓ Berhasil masuk sebagai %s (%s)\n", user.Name, user.Email)
+	fmt.Printf("✓ Berhasil masuk sebagai %s (%s)\n", cfg.Name, cfg.Email)
 	return nil
 }
 

@@ -75,20 +75,18 @@ func connectAgent(serverURL, agentDir string) (*Agent, error) {
 	if serverURL == "" {
 		serverURL = os.Getenv("CIPINCODE_AGENT_URL")
 	}
-	if serverURL == "" {
-		serverURL = "https://cli.cipincode.com"
-	}
-	// Pakai server remote secara langsung tanpa spawn proses lokal jika tidak ada override khusus
-	if serverURL == "https://cli.cipincode.com" && os.Getenv("CIPINCODE_LOCAL_AGENT") != "1" {
-		a := &Agent{URL: serverURL, Token: os.Getenv("CIPINCODE_AGENT_TOKEN")}
+	// URL eksplisit (--server / CIPINCODE_AGENT_URL): pakai server agent
+	// yang sudah berjalan.
+	if serverURL != "" {
+		a := &Agent{URL: strings.TrimRight(serverURL, "/"), Token: os.Getenv("CIPINCODE_AGENT_TOKEN")}
+		if err := a.waitHealthy(5 * time.Second); err != nil {
+			return nil, fmt.Errorf("agent di %s tidak merespons: %w. Periksa CIPINCODE_AGENT_URL atau jalankan tanpa --server", a.URL, err)
+		}
 		return a, nil
 	}
 
-	a := &Agent{URL: strings.TrimRight(serverURL, "/"), Token: os.Getenv("CIPINCODE_AGENT_TOKEN")}
-	if err := a.waitHealthy(5 * time.Second); err == nil {
-		return a, nil
-	}
-
+	// Bawaan: jalankan agent lokal (butuh Node 18+ atau Bun + folder agent
+	// dari install.sh). Agent lokal meneruskan chat ke dashboard.
 	dir, err := findAgentDir(agentDir)
 	if err != nil {
 		return nil, err

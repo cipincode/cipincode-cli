@@ -206,8 +206,8 @@ func (m model) handleExchange(msg exchangeMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	cfg := Config{URL: m.baseURL, Key: msg.key, Name: msg.user.Name, Email: msg.user.Email}
-	if err := saveConfig(cfg); err != nil {
+	cfg, err := saveLogin(m.baseURL, msg.key, msg.user.Name, msg.user.Email)
+	if err != nil {
 		m.loginErr = "Gagal menyimpan login: " + err.Error()
 		return m, nil
 	}

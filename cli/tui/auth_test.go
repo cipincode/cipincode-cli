@@ -67,3 +67,22 @@ func TestLoginRejectsBadKeyAndMissingKey(t *testing.T) {
 		t.Fatal("login tanpa --key seharusnya gagal")
 	}
 }
+
+func TestSaveLoginKeepsProviderAuth(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	old := Config{URL: "https://lama", Key: "k", Name: "A", Email: "a@x",
+		ProviderKeys: map[string]string{"openai": "sk-lama"}, ClaudeAccount: true}
+	if err := saveConfig(old); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := saveLogin("https://baru", "k2", "B", "b@x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.URL != "https://baru" || cfg.Key != "k2" {
+		t.Fatalf("login baru tidak tersimpan: %+v", cfg)
+	}
+	if cfg.ProviderKeys["openai"] != "sk-lama" || !cfg.ClaudeAccount {
+		t.Fatalf("auth provider ikut terhapus: %+v", cfg)
+	}
+}

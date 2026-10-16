@@ -8,7 +8,7 @@
 set -euo pipefail
 
 PREFIX="${CIPINCODE_PREFIX:-$HOME/.local}"
-VERSION="${CIPINCODE_VERSION:-0.2.6}"
+VERSION="${CIPINCODE_VERSION:-0.2.7}"
 MIN_GO="1.24"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

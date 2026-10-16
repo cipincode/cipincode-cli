@@ -78,3 +78,18 @@ func deleteConfig() error {
 	}
 	return nil
 }
+
+// saveLogin menyimpan hasil login (dashboard) baru tanpa menghapus pilihan
+// auth provider yang sudah ada (kunci API / akun Claude): auth yang dipilih
+// tetap dipakai walau login ulang atau terminal ditutup-buka.
+func saveLogin(baseURL, key, name, email string) (Config, error) {
+	cfg := Config{URL: baseURL, Key: key, Name: name, Email: email}
+	if old, _ := loadConfig(); old != nil {
+		cfg.ProviderKeys = old.ProviderKeys
+		cfg.ClaudeAccount = old.ClaudeAccount
+	}
+	if err := saveConfig(cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}

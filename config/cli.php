@@ -9,14 +9,15 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.6'),
+    'version' => env('CLI_VERSION', '0.2.7'),
 
     'changelog' => [
         'added' => [
-            '/update otomatis via install.sh tanpa npm, lalu CLI me-restart sendiri — auth dan pengaturan tetap dipakai',
+            'Chat via server kembali lewat agent lokal sehingga tidak lagi 404',
+            'Login ulang mempertahankan kunci API dan akun Claude yang sudah dipilih',
         ],
         'fixed' => [
-            'Modal update mendeteksi cara install (npm vs curl) agar perintahnya selalu benar',
+            'Hapus default agent remote yang tidak ada servernya; --server tetap didukung eksplisit',
         ],
     ],
 ];
