@@ -82,22 +82,13 @@ func TestSelectProviderOpensConnectModal(t *testing.T) {
 	if m.modal == nil || m.modal.kind != modalClaudeMethod {
 		t.Fatal("Enter pada Anthropic seharusnya membuka pilihan metode")
 	}
-	for _, want := range []string{"Akun Claude", "Kunci API", "Via server"} {
+	for _, want := range []string{"Akun Claude", "Via server"} {
 		if !strings.Contains(plain(m), want) {
 			t.Errorf("modal metode tidak memuat %q", want)
 		}
 	}
-	m, _ = update(m, key(tea.KeyDown)) // Kunci API
-	m, _ = update(m, key(tea.KeyEnter))
-
-	if m.modal == nil || m.modal.kind != modalConnect {
-		t.Fatal("Kunci API seharusnya membuka modal connect")
-	}
-	view := plain(m)
-	for _, want := range []string{"Connect · Anthropic", "API kini memakai Claude Sonnet 4.5 (Anthropic)", "Kunci"} {
-		if !strings.Contains(view, want) {
-			t.Errorf("modal connect tidak memuat %q:\n%s", want, view)
-		}
+	if strings.Contains(plain(m), "Kunci API") {
+		t.Error("modal metode Anthropic tidak boleh menawarkan kunci API")
 	}
 }
 
@@ -161,8 +152,7 @@ func TestConnectModalSaveSkipsKey(t *testing.T) {
 	newConnect := func() model {
 		m := openConnect(t, newScreen(t, screenChat, loggedIn(""), ""))
 		m, _ = update(m, key(tea.KeyDown))
-		m, _ = update(m, key(tea.KeyEnter))
-		m, _ = update(m, key(tea.KeyDown)) // metode: Kunci API
+		m, _ = update(m, key(tea.KeyDown)) // OpenAI
 		m, _ = update(m, key(tea.KeyEnter))
 		return m
 	}
@@ -173,8 +163,8 @@ func TestConnectModalSaveSkipsKey(t *testing.T) {
 	if m.modal != nil {
 		t.Fatal("Esc seharusnya menutup modal connect")
 	}
-	if m.provider != "anthropic" || m.providerKey() != "" {
-		t.Fatalf("provider=%q key=%q, seharusnya anthropic tanpa kunci", m.provider, m.providerKey())
+	if m.provider != "openai" || m.providerKey() != "" {
+		t.Fatalf("provider=%q key=%q, seharusnya openai tanpa kunci", m.provider, m.providerKey())
 	}
 	if !strings.Contains(plain(m), "via server") {
 		t.Error("seharusnya ada catatan via server")
@@ -182,18 +172,18 @@ func TestConnectModalSaveSkipsKey(t *testing.T) {
 
 	// Ketik kunci + Enter = tersimpan dan langsung.
 	m = newConnect()
-	for _, r := range "sk-ant-test" {
+	for _, r := range "sk-test" {
 		m, _ = update(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 	}
 	m, _ = update(m, key(tea.KeyEnter))
 	if m.modal != nil {
 		t.Fatal("Enter seharusnya menutup modal connect")
 	}
-	if m.providerKey() != "sk-ant-test" {
+	if m.providerKey() != "sk-test" {
 		t.Fatalf("kunci tidak tersimpan, got %q", m.providerKey())
 	}
 	cfg, err := loadConfig()
-	if err != nil || cfg == nil || cfg.ProviderKeys["anthropic"] != "sk-ant-test" {
+	if err != nil || cfg == nil || cfg.ProviderKeys["openai"] != "sk-test" {
 		t.Fatalf("config seharusnya menyimpan kunci: %+v %v", cfg, err)
 	}
 	if view := plain(m); !strings.Contains(view, "langsung dengan kunci Anda") {

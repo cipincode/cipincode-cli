@@ -107,7 +107,6 @@ type claudeChoice struct{ name, desc string }
 
 var claudeChoices = []claudeChoice{
 	{"Akun Claude", "login Pro/Max lewat browser (tanpa kunci API)"},
-	{"Kunci API", "tempel kunci dari console.anthropic.com"},
 	{"Via server", "tetap lewat server CipinCode"},
 }
 
@@ -172,9 +171,6 @@ func (m model) chooseClaudeMethod() (tea.Model, tea.Cmd) {
 		m.layout()
 		m.refresh()
 		return m, claudeCheckCmd()
-	case 1:
-		cmd := m.startKeyEntry()
-		return m, cmd
 	}
 	m.modal = nil
 	m.connectPending = nil
