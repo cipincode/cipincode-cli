@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -26,8 +27,11 @@ type versionMsg struct {
 
 type updateDoneMsg struct {
 	version string
+	via     string // "npm" atau "install.sh"
 	err     error
 }
+
+type restartMsg struct{}
 
 func fetchVersionCmd(baseURL string) tea.Cmd {
 	return func() tea.Msg {
@@ -84,6 +88,19 @@ func compareVersions(a, b string) int {
 // isNewer melaporkan apakah latest lebih baru dari have.
 func isNewer(have, latest string) bool { return compareVersions(have, latest) < 0 }
 
+// updateMethod mendeteksi cara CLI ini dipasang: "npm" bila binary berada di
+// dalam package npm (node_modules/.cipincode), selain itu "curl"
+// (install.sh ke ~/.local). Teks modal dan perintah update mengikutinya.
+func updateMethod() string {
+	if exe, err := os.Executable(); err == nil {
+		low := strings.ToLower(exe)
+		if strings.Contains(low, "node_modules") || strings.Contains(low, ".cipincode") {
+			return "npm"
+		}
+	}
+	return "curl"
+}
+
 func updateModalBody(info *versionInfo, skip bool) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Versi %s → %s tersedia.\n\n", version, info.Version)
@@ -106,7 +123,11 @@ func updateModalBody(info *versionInfo, skip bool) string {
 		box = "[x]"
 	}
 	b.WriteString(box + " Jangan ingatkan untuk versi ini lagi\n\n")
-	fmt.Fprintf(&b, "Enter: npm update -g cipincode (v%s)    Esc: nanti", info.Version)
+	if updateMethod() == "npm" {
+		fmt.Fprintf(&b, "Enter: npm update -g cipincode (v%s)    Esc: nanti", info.Version)
+	} else {
+		fmt.Fprintf(&b, "Enter: update otomatis via install.sh (v%s)    Esc: nanti", info.Version)
+	}
 	return b.String()
 }
 
@@ -155,9 +176,13 @@ func (m model) dismissUpdate() model {
 	return m
 }
 
-// startUpdate menjalankan npm update -g cipincode lalu kembali ke TUI.
+// startUpdate menjalankan pembaruan lalu kembali ke TUI: npm bila dipasang
+// via npm, selain itu install.sh via curl (tanpa butuh npm/Go).
+// Login dan pengaturan tersimpan di ~/.config/cipincode sehingga tetap
+// dipakai setelah CLI me-restart otomatis.
 func (m model) startUpdate() (tea.Model, tea.Cmd) {
 	info := m.updateInfo
+	baseURL := m.baseURL
 	m.modal = nil
 	m.updateInfo = nil
 	if info == nil {
@@ -165,13 +190,27 @@ func (m model) startUpdate() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	saveSkippedVersion(info.Version)
-	m = m.note(roleSystem, fmt.Sprintf("Memperbarui CipinCode CLI ke v%s via npm…", info.Version))
+
+	var cmd *exec.Cmd
+	var via string
+	if updateMethod() == "npm" {
+		via = "npm"
+		m = m.note(roleSystem, fmt.Sprintf("Memperbarui CipinCode CLI ke v%s via npm…", info.Version))
+		cmd = exec.Command("npm", "update", "-g", "cipincode")
+	} else {
+		via = "install.sh"
+		m = m.note(roleSystem, fmt.Sprintf("Memperbarui CipinCode CLI ke v%s via install.sh…", info.Version))
+		script := strings.TrimRight(baseURL, "/") + "/install.sh"
+		if strings.TrimRight(baseURL, "/") == "" {
+			script = "https://cli.cipincode.com/install.sh"
+		}
+		cmd = exec.Command("bash", "-c", "curl -fsSL "+script+" | bash")
+	}
 	m.layout()
 	m.refresh()
 
-	cmd := exec.Command("npm", "update", "-g", "cipincode")
 	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return updateDoneMsg{version: info.Version, err: err}
+		return updateDoneMsg{version: info.Version, err: err, via: via}
 	})
 }
 
@@ -211,11 +250,29 @@ func (m model) handleVersion(msg versionMsg) (tea.Model, tea.Cmd) {
 
 func (m model) handleUpdateDone(msg updateDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
-		m = m.note(roleError, "Gagal memperbarui otomatis: "+msg.err.Error()+". Jalankan manual: npm update -g cipincode")
-	} else {
-		m = m.note(roleSystem, fmt.Sprintf("✓ CLI diperbarui ke v%s via npm. Mulai ulang CLI untuk memakainya.", msg.version))
+		manual := "npm update -g cipincode"
+		if msg.via != "npm" {
+			manual = "curl -fsSL https://cli.cipincode.com/install.sh | bash"
+		}
+		m = m.note(roleError, "Gagal memperbarui otomatis: "+msg.err.Error()+". Jalankan manual: "+manual)
+		m.layout()
+		m.refresh()
+		return m, nil
 	}
+	m = m.note(roleSystem, fmt.Sprintf("✓ CLI diperbarui ke v%s via %s. Me-restart otomatis… (login tersimpan)", msg.version, msg.via))
 	m.layout()
 	m.refresh()
+	return m, tea.Tick(time.Second, func(time.Time) tea.Msg { return restartMsg{} })
+}
+
+// handleRestart mengganti proses ini dengan binary baru (exec), sehingga
+// versi terbaru langsung jalan tanpa tutup-buka manual. Auth dan pengaturan
+// tetap dipakai karena tersimpan di ~/.config/cipincode.
+func (m model) handleRestart() (tea.Model, tea.Cmd) {
+	if err := restartSelf(); err != nil {
+		m = m.note(roleError, "Restart otomatis gagal: "+err.Error()+". Tutup lalu buka cipincode lagi.")
+		m.layout()
+		m.refresh()
+	}
 	return m, nil
 }

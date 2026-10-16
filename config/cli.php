@@ -9,15 +9,14 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.5'),
+    'version' => env('CLI_VERSION', '0.2.6'),
 
     'changelog' => [
         'added' => [
-            '/usage kini mengikuti akun provider saat mode langsung (akun Claude / kunci sendiri), bukan jatah server 5 jam',
-            'Panggilan tool AI (mis. execute_command) tampil sebagai kotak rapi, bukan XML mentah',
+            '/update otomatis via install.sh tanpa npm, lalu CLI me-restart sendiri — auth dan pengaturan tetap dipakai',
         ],
         'fixed' => [
-            'Header chat menandai mode langsung agar tidak tertukar dengan kuota server',
+            'Modal update mendeteksi cara install (npm vs curl) agar perintahnya selalu benar',
         ],
     ],
 ];
