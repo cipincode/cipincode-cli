@@ -24,7 +24,7 @@ jobs:
             runner: ubuntu-24.04-arm
           - goos: darwin
             goarch: amd64
-            runner: macos-13
+            runner: macos-15-intel
           - goos: darwin
             goarch: arm64
             runner: macos-latest
@@ -127,15 +127,25 @@ jobs:
           body: |
             ## CipinCode CLI ${{ github.ref_name }}
 
-            ### Instalasi
+            Disarankan memakai versi terbaru agar modal pengingat update di terminal tidak muncul terus.
+
+            ### Cara update
+
+            ```bash
+            npm update -g cipincode
+            ```
+
+            atau buka CLI lalu ketik `/update`.
+
+            ### Instalasi baru
 
             ```bash
             npm install -g cipincode
             ```
 
-            ### Manual download
+            ### Unduhan manual
 
-            Pilih binary sesuai platform di bawah.
+            Pilih binary sesuai platform di bawah (Assets), plus `agent.tar.gz` bila diperlukan.
           files: |
             artifacts/cipincode-linux-amd64
             artifacts/cipincode-linux-arm64
