@@ -180,7 +180,7 @@ jobs:
         working-directory: cipincode-npm
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          npm version "$VERSION" --no-git-tag-version
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - name: Publish ke npm
         working-directory: cipincode-npm
