@@ -9,14 +9,14 @@
  * `fixed` (perbaikan) dalam Bahasa Indonesia.
  */
 return [
-    'version' => env('CLI_VERSION', '0.2.3'),
+    'version' => env('CLI_VERSION', '0.2.4'),
 
     'changelog' => [
         'added' => [
-            'Pilihan Auth Login dan API Key di /connect → Anthropic: login Pro/Max lewat browser (link resmi claude.ai) atau tempel kunci sendiri',
+            '/model kini memuat daftar langsung dari akun provider Anda bila tersambung dengan kunci sendiri (disaring ke model obrolan, nama ramah bila dikenal)',
         ],
         'fixed' => [
-            'Opsi API Key Anthropic dikembalikan agar bisa langsung dengan kunci sendiri tanpa lewat server',
+            'Bila akun provider tidak bisa dihubungi, /model otomatis memakai katalog bawaan',
         ],
     ],
 ];

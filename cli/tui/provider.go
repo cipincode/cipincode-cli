@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -172,7 +175,9 @@ func providersBody(cursor int, active string) string {
 }
 
 // modelsBody menggambar daftar model milik satu provider.
-func modelsBody(p *provider, models []providerModel, cursor int, active string) string {
+// live menandakan daftar diambil langsung dari akun provider,
+// bukan katalog bawaan.
+func modelsBody(p *provider, models []providerModel, cursor int, active string, live bool) string {
 	total := len(models)
 	start := 0
 	if cursor >= providerWindow {
@@ -181,7 +186,11 @@ func modelsBody(p *provider, models []providerModel, cursor int, active string) 
 	end := min(start+providerWindow, total)
 
 	selected := lipgloss.NewStyle().Bold(true).Foreground(orange)
-	lines := []string{mutedStyle.Render("Model " + p.name + " yang dipakai untuk percakapan ini."), ""}
+	header := "Model " + p.name + " yang dipakai untuk percakapan ini."
+	if live {
+		header = "Daftar langsung dari akun " + p.name + " Anda."
+	}
+	lines := []string{mutedStyle.Render(header), ""}
 	for i := start; i < end; i++ {
 		mdl := models[i]
 		mark := ""
@@ -209,7 +218,9 @@ func (m model) openProvidersModal() model {
 
 func (m model) openModelsModal() model {
 	p := parseProvider(m.provider)
-	v := newModal("Model · "+p.name, modelsBody(p, providerModels(m.provider), m.modelCursor, m.modelID))
+	models := m.currentModels()
+	live := m.modelsLive && len(m.modelChoices) > 0
+	v := newModal("Model · "+p.name, modelsBody(p, models, m.modelCursor, m.modelID, live))
 	v.kind = modalModels
 	v.footer = "↑↓ pilih · Enter pakai · Esc tutup"
 	m.modal = v
@@ -254,7 +265,7 @@ func (m model) keyProvidersModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) keyModelsModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	models := providerModels(m.provider)
+	models := m.currentModels()
 	total := max(len(models), 1)
 	moved := false
 
@@ -437,7 +448,7 @@ func (m model) saveConnectKey() model {
 func (m model) selectModel() model {
 	m.modal = nil
 
-	models := providerModels(m.provider)
+	models := m.currentModels()
 	if m.modelCursor >= 0 && m.modelCursor < len(models) {
 		mdl := models[m.modelCursor]
 		m.modelID = mdl.id
@@ -448,4 +459,171 @@ func (m model) selectModel() model {
 	m.layout()
 	m.refresh()
 	return m
+}
+
+// ---- daftar model langsung dari akun provider ----
+
+type modelsMsg struct {
+	models []providerModel
+	err    error
+}
+
+// modelsLiveOK: daftar live hanya tersedia bila ada kunci API sendiri
+// (jalur langsung). Akun Claude (lewat Claude Code) dan via server
+// memakai katalog bawaan.
+func (m model) modelsLiveOK() bool {
+	return m.provider != "" && m.providerKey() != "" && !m.useClaudeAccount()
+}
+
+// currentModels: daftar live hasil fetch, atau katalog bawaan.
+func (m model) currentModels() []providerModel {
+	if m.modelsLive && len(m.modelChoices) > 0 {
+		return m.modelChoices
+	}
+	return providerModels(m.provider)
+}
+
+// modelBlocklist adalah jenis model non-obrolan yang disembunyikan
+// dari daftar live (audio, gambar, embedding, moderasi).
+var modelBlocklist = []string{
+	"whisper", "tts", "dall", "embedding", "moderation",
+	"transcribe", "realtime",
+}
+
+func blockedModel(id string) bool {
+	low := strings.ToLower(id)
+	for _, b := range modelBlocklist {
+		if strings.Contains(low, b) {
+			return true
+		}
+	}
+	return false
+}
+
+// friendlyNames memetakan ID mentah provider ke nama/desc katalog
+// bila dikenal (mis. "gpt-4o" → "GPT-4o").
+func friendlyNames(providerID string) map[string]providerModel {
+	out := map[string]providerModel{}
+	for _, mdl := range providerModels(providerID) {
+		raw := mdl.id
+		if i := strings.LastIndex(raw, "/"); i >= 0 {
+			raw = raw[i+1:]
+		}
+		out[raw] = mdl
+		if mdl.direct != "" {
+			out[mdl.direct] = mdl
+		}
+	}
+	return out
+}
+
+func fetchModelsCmd(providerID, key string) tea.Cmd {
+	return func() tea.Msg {
+		models, err := fetchProviderModels(providerID, key)
+		return modelsMsg{models: models, err: err}
+	}
+}
+
+func fetchProviderModels(providerID, key string) ([]providerModel, error) {
+	p := parseProvider(providerID)
+	if p == nil || p.baseURL == "" {
+		return nil, fmt.Errorf("provider %s tidak mendukung daftar langsung", providerID)
+	}
+	if key == "" {
+		return nil, fmt.Errorf("butuh kunci API untuk memuat daftar model")
+	}
+	return fetchModelsFrom(providerID, key, p.baseURL)
+}
+
+// fetchModelsFrom mengambil /models dari API provider. baseURL dipisah
+// agar bisa diuji dengan server lokal.
+func fetchModelsFrom(providerID, key, baseURL string) ([]providerModel, error) {
+	var req *http.Request
+	var err error
+	if providerID == "anthropic" {
+		req, err = http.NewRequest(http.MethodGet, strings.TrimRight(baseURL, "/")+"/v1/models", nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("x-api-key", key)
+		req.Header.Set("anthropic-version", "2023-06-01")
+	} else {
+		req, err = http.NewRequest(http.MethodGet, strings.TrimRight(baseURL, "/")+"/models", nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("tidak bisa terhubung ke %s", providerName(providerID))
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return nil, fmt.Errorf("kunci API %s ditolak", providerName(providerID))
+	default:
+		return nil, fmt.Errorf("%s membalas status %d", providerName(providerID), resp.StatusCode)
+	}
+
+	var body struct {
+		Data []struct {
+			ID          string `json:"id"`
+			DisplayName string `json:"display_name"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("balasan %s tidak valid", providerName(providerID))
+	}
+
+	friendly := friendlyNames(providerID)
+	var models []providerModel
+	for _, d := range body.Data {
+		if d.ID == "" || blockedModel(d.ID) {
+			continue
+		}
+		if f, ok := friendly[d.ID]; ok {
+			models = append(models, f)
+			continue
+		}
+		name := d.ID
+		desc := "dari akun Anda"
+		if d.DisplayName != "" {
+			name, desc = d.DisplayName, d.ID
+		}
+		models = append(models, providerModel{id: d.ID, name: name, desc: desc})
+		if len(models) >= 60 {
+			break
+		}
+	}
+	if len(models) == 0 {
+		return nil, fmt.Errorf("tidak ada model yang bisa dipakai di akun ini")
+	}
+	return models, nil
+}
+
+// handleModels membuka modal /model: daftar live bila berhasil,
+// katalog bawaan bila akun tidak bisa dihubungi.
+func (m model) handleModels(msg modelsMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil || len(msg.models) == 0 {
+		m.modelChoices = nil
+		m.modelsLive = false
+		if msg.err != nil {
+			m = m.note(roleError, "Tidak bisa memuat daftar dari akun: "+msg.err.Error()+". Memakai daftar bawaan.")
+		}
+	} else {
+		m.modelChoices = msg.models
+		m.modelsLive = true
+	}
+	m.modelCursor = 0
+	for i, mdl := range m.currentModels() {
+		if mdl.id == m.modelID {
+			m.modelCursor = i
+		}
+	}
+	return m.openModelsModal(), nil
 }

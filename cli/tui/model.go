@@ -115,6 +115,8 @@ type model struct {
 	agentCursor    int
 	provider       string // ID provider API ("": Otomatis ikut paket)
 	modelID        string // ID model yang dipakai ("": bawaan provider)
+	modelChoices   []providerModel // daftar live dari akun provider (nil = katalog bawaan)
+	modelsLive     bool             // modelChoices berasal dari fetch akun
 	providerCursor int
 	modelCursor    int
 	claudeCursor   int             // pilihan di modal metode Anthropic
@@ -260,6 +262,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agentsMsg:
 		return m.handleAgents(msg)
+
+	case modelsMsg:
+		return m.handleModels(msg)
 
 	case versionMsg:
 		return m.handleVersion(msg)
@@ -566,7 +571,15 @@ func (m model) runCommand(name string) (tea.Model, tea.Cmd) {
 	case "model":
 		if parseProvider(m.provider) == nil {
 			m = m.note(roleSystem, "Belum ada provider. Pilih dulu dengan /connect.")
+		} else if m.modelsLiveOK() {
+			// Ada kunci sendiri: muat daftar live dari akun provider.
+			m = m.note(roleSystem, "Memuat daftar model dari akun "+providerName(m.provider)+"…")
+			m.layout()
+			m.refresh()
+			return m, fetchModelsCmd(m.provider, m.providerKey())
 		} else {
+			// Via server atau akun Claude: memakai katalog bawaan.
+			m.modelChoices, m.modelsLive = nil, false
 			models := providerModels(m.provider)
 			m.modelCursor = 0
 			for i, mdl := range models {
