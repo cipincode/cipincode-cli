@@ -9,6 +9,7 @@
     },
     "files": [
         "bin",
+        "tui",
         "README.md",
         "LICENSE"
     ],

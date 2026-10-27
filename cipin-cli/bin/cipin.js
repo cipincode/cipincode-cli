@@ -12,6 +12,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { createRequire } from "node:module";
 import { homedir, hostname } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 
 const VERSION = "2.1.4";
@@ -257,6 +258,12 @@ async function main() {
         env.OPENCODE_DISABLE_AUTOUPDATE = "1";
         // Own data folder, so it never shares a database with another OpenCode install.
         env.XDG_DATA_HOME ??= join(homedir(), ".local", "share", "cipin");
+        // Cipin logo on the home screen: a TUI plugin, loaded only by this command.
+        const tuiConfig = fileURLToPath(new URL("../tui/tui.json", import.meta.url));
+
+        if (existsSync(tuiConfig)) {
+            env.OPENCODE_TUI_CONFIG ??= tuiConfig;
+        }
     }
 
     if (command === "--version" || command === "-v") {
