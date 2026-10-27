@@ -88,8 +88,13 @@ async function login() {
     openBrowser(url);
 
     const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const code = (await rl.question("Tempel kode (XXXX-XXXX): ")).trim();
-    rl.close();
+    let code;
+
+    try {
+        code = (await rl.question("Tempel kode (XXXX-XXXX): ")).trim();
+    } finally {
+        rl.close();
+    }
 
     if (!code) {
         return fail("Kode kosong.");
@@ -266,4 +271,14 @@ async function main() {
     child.on("exit", (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
 }
 
-await main();
+try {
+    await main();
+} catch (error) {
+    // Ctrl+C while waiting for input: leave quietly instead of printing a stack trace.
+    if (error?.code === "ABORT_ERR") {
+        console.log("\nDibatalkan.");
+        process.exit(130);
+    }
+
+    fail(error?.message ?? String(error));
+}
