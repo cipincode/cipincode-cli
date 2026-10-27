@@ -42,6 +42,11 @@ try {
     npm install --omit=dev --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw "npm install gagal (kode $LASTEXITCODE)." }
 
+    # A previous install leaves a registration behind (and its folder was just replaced): drop it first.
+    $strict = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    npm uninstall -g cipin-cli *> $null
+    $ErrorActionPreference = $strict
     npm install -g .
     if ($LASTEXITCODE -ne 0) { throw "Gagal mendaftarkan perintah cipin (kode $LASTEXITCODE)." }
 }

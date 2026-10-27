@@ -33,6 +33,8 @@ cp -R "$SRC" "$DEST"
 cd "$DEST"
 echo "Memasang dependensi (OpenCode)..."
 npm install --omit=dev --no-audit --no-fund
+# A previous install leaves a registration behind (and its folder was just replaced): drop it first.
+npm uninstall -g cipin-cli >/dev/null 2>&1 || true
 npm install -g .
 
 cat <<EOF
