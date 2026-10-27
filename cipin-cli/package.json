@@ -1,0 +1,29 @@
+{
+    "name": "cipin-cli",
+    "version": "2.1.4",
+    "description": "Cipin CLI: terminal AI coding agent for Cipincode (OpenCode with the Cipin gateway preset).",
+    "license": "MIT",
+    "type": "module",
+    "bin": {
+        "cipin": "bin/cipin.js"
+    },
+    "files": [
+        "bin",
+        "README.md",
+        "LICENSE"
+    ],
+    "dependencies": {
+        "opencode-ai": "1.19.4"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "keywords": [
+        "cipin",
+        "cipincode",
+        "cli",
+        "ai",
+        "opencode"
+    ],
+    "homepage": "https://cipincode.com"
+}
