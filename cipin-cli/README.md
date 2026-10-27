@@ -4,23 +4,21 @@ Agen coding AI di terminal untuk [Cipincode](https://cipincode.com). Dibangun di
 
 ## Instalasi
 
-Butuh Node.js 18 atau lebih baru.
+Butuh Node.js 18 atau lebih baru. Dipasang langsung dari GitHub (folder `cipin-cli/`), tanpa npm publish.
 
-```bash
-npm install -g cipin-cli
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/cipincode/cipincode-cli/main/cipin-cli/install.ps1 | iex
 ```
-
-Atau lewat skrip:
 
 ```bash
 # Linux / macOS
 curl -fsSL https://raw.githubusercontent.com/cipincode/cipincode-cli/main/cipin-cli/install.sh | sh
 ```
 
-```powershell
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/cipincode/cipincode-cli/main/cipin-cli/install.ps1 | iex
-```
+Terpasang di `~/.cipin/cli`. Untuk memperbarui, jalankan perintah yang sama lagi.
+
+Opsional: `CIPIN_REF` (branch atau tag, default `main`) dan `CIPIN_DIR` (folder pasang).
 
 ## Pemakaian
 
